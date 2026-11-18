@@ -4,6 +4,7 @@ import {paperUserMarketUiCommand} from './paper-user-market-ui.mjs';
 import {selectGuideTechnicalDecision,corroborateGuideTechnicalDecision,GUIDE_TECHNICAL_DECISION_VERSION,GUIDE_TECHNICAL_CHECK_IDS} from './guide-technical-decision.mjs';
 import {GUIDE_SIGNAL_VERSION} from './guide-signal-engine.mjs';
 import {selectFreshLiveSignal} from './live-signal-eligibility.mjs';
+import {matchRoiBrrReady,roiBrrEventId,ROI_BRR_APPROVAL_POLICY} from './roi-brr-live-signal.mjs';
 
 const copy=x=>structuredClone(x),finite=Number.isFinite,integer=Number.isSafeInteger;
 const text=x=>typeof x==='string'&&x.length>0&&x.length<=16384&&!/[\u0000-\u001f\u007f]/.test(x);
@@ -29,7 +30,7 @@ export function createLivePaperUserControls({document,chrome,extension,getContex
   if(nativeCommandForProfile!==undefined&&typeof nativeCommandForProfile!=='function')throw TypeError('NATIVE_COMMAND_RESOLVER_REQUIRED');
   if([performanceEpoch,receiverTimeOrigin,isVisible,isOnscreen].some(fn=>typeof fn!=='function'))throw TypeError('PAPER_USER_TIMING_CALLBACKS_REQUIRED');
   const ui=Object.fromEntries(ids.map(id=>[id,document?.getElementById(id)]));
-  if(Object.values(ui).some(node=>!node))return {accept(){},activate(){},refresh(){},disconnect(){},disarm(){},dispose(){},snapshot:()=>({status:'UNAVAILABLE',ordersCreated:false,realBrokerOrdersAuthorized:false})};
+  if(Object.values(ui).some(node=>!node))return {accept(){},acceptBrr(){},activate(){},refresh(){},disconnect(){},disarm(){},dispose(){},snapshot:()=>({status:'UNAVAILABLE',ordersCreated:false,realBrokerOrdersAuthorized:false})};
   const power={bar:document?.getElementById('paper-user-power-bar'),state:document?.getElementById('paper-user-power-state'),detail:document?.getElementById('paper-user-power-detail')};
   let disposed=false,operation=0,busy=false,presentationBusy=false,wanted=false,timer=null,lastLoopAt=-Infinity,candidate=null,nativeEvidence=null,bound=null,preparedConnection=null,lastNativeResult=null,lastError=null,pendingStored=false,releasedClosedKey=null,pendingNativeFill=null,lastVerifiedFill=null,pendingSignalWake=false,lastWakeEvent=null;
   let entryMarkerLedger=[],entryMarkerFillFacts=[];
@@ -238,6 +239,12 @@ export function createLivePaperUserControls({document,chrome,extension,getContex
   function approval(){
     const c=context(),s=source(c),a=candidate;
     if(!a||!recent(a.originalReceivedAt,15000)||a.source.runId!==s.runId||a.source.sessionId!==s.sessionId||a.source.generation!==s.generation||!same(a.source.closedBar,s.closedBar))throw Error('PAPER_USER_NEW_CLOSED_APPROVAL_REQUIRED');
+    if(a.approvalProof.approvalPolicy===ROI_BRR_APPROVAL_POLICY){
+      const observed=c.latestEvidence?.roiBrr;
+      if(!matchRoiBrrReady(observed,c.state.bars.at(-1),{...s,sourceUrl:s.researchUrl,now:now()})||observed.direction!==a.direction||observed.priceTicks!==a.approvalProof.priceTicks)
+        throw Error('ROI_BRR_LIVE_READY_NO_LONGER_VERIFIED');
+      return {...a,sourceBinding:s};
+    }
     const current=selectGuideTechnicalDecision({analysis:c.analysis,bars:c.state.bars,asOfTime:c.analysis?.asOfTime});
     if(current.status!=='CONFIRMED'||current.synthetic||current.testOnly||current.signal?.eventId!==a.approvalProof.eventId||current.direction!==a.direction||a.approvalProof.sourceEventIds.some(id=>!current.signal.sourceEventIds.includes(id))
       ||a.setups.some(setup=>{const event=c.analysis.events.find(e=>e.eventId===setup.eventId);return !event||event.trigger!==setup.trigger||event.invalidation!==setup.structuralInvalidation;}))throw Error('PAPER_USER_CURRENT_ANALYSIS_VETOED_APPROVAL');
@@ -412,6 +419,27 @@ export function createLivePaperUserControls({document,chrome,extension,getContex
     if(bound&&extension)void native('disarm',{reason}).catch(()=>{});
     render();schedule();return snapshot();
   }
+  function measurementAnchor(item){
+    return {readEventId:item.readEventId??null,sourcePacketId:item.sourcePacketId??null,receivedAt:item.receivedAt,approvedAtReceiverEpoch:item.approvedAtReceiverEpoch,sourceEmittedAt:item.sourceEmittedAt??null,...ownedOrigin(item),clockDomains:{receivedAt:'RECEIVER_PACKET_RECEIPT_EPOCH',approvedAtReceiverEpoch:'RECEIVER_PERFORMANCE_TIME_ORIGIN_PLUS_NOW',sourceEmittedAt:'PRODUCER_SOURCE_EPOCH_NOT_COMPARED_TO_RECEIVER',sourceObservation:'SOURCE_DOCUMENT_PERFORMANCE_EPOCH_WITH_OPTIONAL_RECEIVER_CALIBRATION'}};
+  }
+  function wakeForApproval(){
+    approval();if(wanted&&!busy)return loop();if(wanted&&busy&&!runner.snapshot().ownedRecord&&lastWakeEvent!==candidate.approvalProof.eventId){pendingSignalWake=true;lastWakeEvent=candidate.approvalProof.eventId;}render();return snapshot();
+  }
+  function acceptBrr(item,origin){
+    try{
+      const c=context(),s=source(c),v=c.state,observed=c.latestEvidence?.roiBrr;
+      if(item?.testOnly===true||item?.sessionId!==s.sessionId||item.runId!==s.runId||item.sourceTabId!==s.sourceTabId||
+        origin?.generation!==s.generation||origin.runId!==s.runId||origin.closeTime!==s.asOfTime||origin.receivedAt!==item.receivedAt||!recent(item.receivedAt,15000)||
+        !finite(item.approvedAtReceiverEpoch)||item.approvedAtReceiverEpoch<0||!integer(v.bootstrapAsOfTime)||v.bootstrapAsOfTime>=s.asOfTime||
+        !matchRoiBrrReady(observed,v.bars.at(-1),{...s,sourceUrl:s.researchUrl,now:now()})||item.signal?.approvalPolicy!==ROI_BRR_APPROVAL_POLICY||
+        item.signal.eventId!==roiBrrEventId(s.asOfTime,observed.direction)||item.signal.direction!==observed.direction)
+        throw Error('ROI_BRR_NEW_CONFIRMED_READY_REQUIRED');
+      candidate={source:s,direction:observed.direction,originalReceivedAt:item.receivedAt,measurementAnchor:measurementAnchor(item),
+        approvalProof:{kind:'ROI_BRR_MARKET_APPROVAL_V1',approvalPolicy:ROI_BRR_APPROVAL_POLICY,eventId:item.signal.eventId,
+          closeTime:s.asOfTime,direction:observed.direction,priceTicks:observed.priceTicks}};
+      return wakeForApproval();
+    }catch(e){lastError=String(e?.message??e).slice(0,160);render();return snapshot();}
+  }
   function accept(item,analysis,state){
     try{
       const c=context(),s=source(c),technical=selectGuideTechnicalDecision({analysis,bars:state.bars,asOfTime:analysis.asOfTime});
@@ -424,8 +452,8 @@ export function createLivePaperUserControls({document,chrome,extension,getContex
       const selected=new Set(fresh.setupEventIds),strategyProofs=technical.signal.strategyProofs.map(p=>({...copy(p),sourceEventIds:p.sourceEventIds.filter(id=>selected.has(id))})).filter(p=>p.sourceEventIds.length);
       const required=new Set(strategyProofs.flatMap(p=>p.requiredCheckIds)),sourceEventIds=technical.signal.sourceEventIds.filter(id=>selected.has(id));
       const events=new Map(analysis.events.map(e=>[e.eventId,e])),setups=sourceEventIds.map(id=>({eventId:id,trigger:events.get(id).trigger,structuralInvalidation:events.get(id).invalidation}));
-      candidate={source:s,direction:technical.direction,originalReceivedAt:item.receivedAt,measurementAnchor:{readEventId:item.readEventId??null,sourcePacketId:item.sourcePacketId??null,receivedAt:item.receivedAt,approvedAtReceiverEpoch:item.approvedAtReceiverEpoch,sourceEmittedAt:item.sourceEmittedAt??null,...ownedOrigin(item),clockDomains:{receivedAt:'RECEIVER_PACKET_RECEIPT_EPOCH',approvedAtReceiverEpoch:'RECEIVER_PERFORMANCE_TIME_ORIGIN_PLUS_NOW',sourceEmittedAt:'PRODUCER_SOURCE_EPOCH_NOT_COMPARED_TO_RECEIVER',sourceObservation:'SOURCE_DOCUMENT_PERFORMANCE_EPOCH_WITH_OPTIONAL_RECEIVER_CALIBRATION'}},setups,approvalProof:{engineDefinitionVersion:GUIDE_SIGNAL_VERSION,technicalDecisionVersion:GUIDE_TECHNICAL_DECISION_VERSION,eventId:technical.signal.eventId,asOfTime:s.asOfTime,analysisAsOfTime:analysis.asOfTime,direction:technical.direction,confirmedAt:technical.signal.confirmedAt,confirmationBarCloseTime:technical.signal.confirmationBarCloseTime,confirmationPolicy:'later_close_beyond_setup',approvalPolicy:'guide_scenarios_v1',strategyProofs,requiredChecks:technical.signal.requiredChecks.filter(check=>required.has(check.id)),roleReversalEnabled:true,supplyDemandEnabled:true,sourceEventIds}};
-      approval();if(wanted&&!busy)return loop();if(wanted&&busy&&!runner.snapshot().ownedRecord&&lastWakeEvent!==candidate.approvalProof.eventId){pendingSignalWake=true;lastWakeEvent=candidate.approvalProof.eventId;}render();return snapshot();
+      candidate={source:s,direction:technical.direction,originalReceivedAt:item.receivedAt,measurementAnchor:measurementAnchor(item),setups,approvalProof:{engineDefinitionVersion:GUIDE_SIGNAL_VERSION,technicalDecisionVersion:GUIDE_TECHNICAL_DECISION_VERSION,eventId:technical.signal.eventId,asOfTime:s.asOfTime,analysisAsOfTime:analysis.asOfTime,direction:technical.direction,confirmedAt:technical.signal.confirmedAt,confirmationBarCloseTime:technical.signal.confirmationBarCloseTime,confirmationPolicy:'later_close_beyond_setup',approvalPolicy:'guide_scenarios_v1',strategyProofs,requiredChecks:technical.signal.requiredChecks.filter(check=>required.has(check.id)),roleReversalEnabled:true,supplyDemandEnabled:true,sourceEventIds}};
+      return wakeForApproval();
     }catch(e){lastError=String(e?.message??e).slice(0,160);render();return snapshot();}
   }
   function refresh(){
@@ -458,5 +486,5 @@ export function createLivePaperUserControls({document,chrome,extension,getContex
     }finally{busy=false;render();schedule();}
   }
   const reviewInput=document?.getElementById('paper-user-recovery-export');if(reviewInput){const onReview=async()=>{try{const file=reviewInput.files?.[0];if(!file||file.size>25000000)throw Error('PAPER_USER_BOUNDED_EXPORT_REQUIRED');await reviewNotSubmittedExport(JSON.parse(await file.text()));}catch(error){lastError=String(error?.message??error);render();}finally{reviewInput.value='';}};reviewInput.addEventListener('change',onReview);listeners.push([reviewInput,'change',onReview]);}
-  render();return {accept,activate,refresh,disconnect,disarm,snapshot,runPresentation,reviewNotSubmittedExport,dispose(){if(disposed)return;disarm('PAPER_USER_PAGE_CLOSED');disposed=true;for(const [node,event,fn]of listeners)node.removeEventListener?.(event,fn);}};
+  render();return {accept,acceptBrr,activate,refresh,disconnect,disarm,snapshot,runPresentation,reviewNotSubmittedExport,dispose(){if(disposed)return;disarm('PAPER_USER_PAGE_CLOSED');disposed=true;for(const [node,event,fn]of listeners)node.removeEventListener?.(event,fn);}};
 }

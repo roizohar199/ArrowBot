@@ -211,6 +211,17 @@ export async function nativeUserMarketUiCommand(command={}){
     const key=['execution-attempt-1',provider,environment,expected.nativeAccountId,b.symbol,s.eventId].map(encodeURIComponent).join(':');if(attemptKey!==key)fail('NATIVE_USER_DURABLE_ATTEMPT_KEY_MISMATCH');return b;
   }
   function approvalCheck(permit,approval,witness,binding,quote,sourceClose,sourceEmittedAt){
+    if(approval?.approvalPolicy==='roi_brr_market_on_ready_v1'){
+      const a=approval,s=permit.signal,observed=globalThis[Symbol.for('arrow.roi-brr-live-observation.v1')],age=now()-observed?.observedAtWall;
+      if(a.kind!=='ROI_BRR_MARKET_APPROVAL_V1'||a.eventId!==s.eventId||a.eventId!==`CME_MINI:NQ1!:1:${s.confirmedAt}:${s.direction}:ROI_BRR`||
+        a.direction!==s.direction||a.closeTime!==s.confirmedAt||binding.asOfTime!==a.closeTime||binding.runId!==permit.binding.sourceRunId||
+        !integer(a.priceTicks)||a.priceTicks<=0||a.priceTicks!==binding.closedBar?.close/.25||!tick(quote)||!tick(sourceClose)||
+        observed?.kind!=='ROI_BRR_LIVE_READY_V1'||observed.documentTimeOrigin!==performance.timeOrigin||observed.sourceUrl!==binding.researchUrl||
+        observed.sessionId!==binding.sessionId||observed.runId!==binding.runId||observed.closeTime!==a.closeTime||observed.direction!==a.direction||observed.priceTicks!==a.priceTicks||
+        !finite(age)||age<0||age>2000||!integer(observed.sourceEmittedAt)||observed.sourceEmittedAt>sourceEmittedAt||sourceEmittedAt-a.closeTime>15000)
+        fail('NATIVE_USER_ROI_BRR_LIVE_READY_PROOF_REQUIRED');
+      return [s.eventId];
+    }
     const profiles={CANDLE_TREND_AT_ZONE:['STRUCTURE','KNOWN_LOCATION'],CANDLE_REVERSAL_AT_ZONE:['STRUCTURE','KNOWN_LOCATION'],CANDLE_RANGE_EDGE:['STRUCTURE','KNOWN_LOCATION'],PIN_TREND_AT_ZONE:['STRUCTURE','KNOWN_LOCATION'],PIN_CONFLUENCE:['STRUCTURE','KNOWN_LOCATION','HIGHER_TIMEFRAME'],PIN_RANGE_EDGE:['STRUCTURE','KNOWN_LOCATION'],ENGULFING_EMA:['STRUCTURE','EMA'],ENGULFING_FIB:['STRUCTURE','FIB'],ENGULFING_TRENDLINE:['STRUCTURE','TRENDLINE'],ENGULFING_RANGE:['STRUCTURE','KNOWN_LOCATION'],ENGULFING_SUPPLY_DEMAND:['STRUCTURE','SUPPLY_DEMAND'],ENGULFING_RANGE_RECLAIM:['STRUCTURE','KNOWN_LOCATION'],HANGING_MAN_REVERSAL:['STRUCTURE','KNOWN_LOCATION'],INVERTED_HAMMER_REVERSAL:['STRUCTURE','KNOWN_LOCATION'],INSIDE_BREAKOUT:['STRUCTURE','KNOWN_LOCATION'],INSIDE_FALSE_BREAK:['STRUCTURE','KNOWN_LOCATION'],INSIDE_FALSE_BREAK_FIB:['STRUCTURE','FIB'],ROLE_REVERSAL_RETEST:['STRUCTURE','KNOWN_LOCATION']};
     const a=approval,s=permit.signal,passed=row=>['required','enabled','available','passed'].every(k=>row?.[k]===true)&&row.state==='PASS'&&row.pendingConfirmation!==true;
     if(a?.engineDefinitionVersion!=='guide-signals-5'||a.technicalDecisionVersion!=='guide-technical-decision-1'||a.approvalPolicy!=='guide_scenarios_v1'||a.eventId!==s.eventId||a.direction!==s.direction||a.asOfTime!==s.confirmedAt||a.confirmationBarCloseTime!==s.confirmedAt

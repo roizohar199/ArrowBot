@@ -78,9 +78,12 @@ export function readTradingViewWindowEvidence({bootstrap,bootstrapHistory,sessio
   if(retainedContext&&(retainedContext.document!==document||retainedContext.sourceDocumentTimeOrigin!==performance.timeOrigin||retainedContext.sourceUrl!==pageUrl||!Number.isFinite(retainedContext.observedAtPerformance)||performance.now()<retainedContext.observedAtPerformance||performance.now()-retainedContext.observedAtPerformance>60000))discardRetained('DOCUMENT_OR_AGE_CHANGED');
   const canReuseRetained=!reset&&!observationOnly&&!suppliedBootstrapHistory&&retainedContext&&priorOwner?.sessionId!==sessionId;
   let rpcSourceDomTiming=null;
+  let roiBrr=null,roiBrrStatus=null;
+  const roiBrrKey=Symbol.for('arrow.roi-brr-live-observation.v1');
+  if(!observationOnly)delete globalThis[roiBrrKey];
   const clockEvidence=()=>{const owned=globalThis.__arrowWindowFeedV2;return owned?.sessionId===sessionId&&Array.isArray(owned.clockWitnesses)?structuredClone(owned.clockWitnesses.slice(-8)):[];};
   const continuityEvidence=()=>{const owned=globalThis.__arrowWindowFeedV2;return owned?.sessionId===sessionId&&Array.isArray(owned.continuityDecisions)?structuredClone(owned.continuityDecisions.slice(-16)):[];};
-  const empty=(reason,status='UNAVAILABLE',extra={})=>({status,reasonCodes:[reason],messages:[],chart:null,observedAtWall,readMs:performance.now()-started,transport:'PUBLIC_DATA_WINDOW_V2',sourceDomTiming:rpcSourceDomTiming,continuityDecisions:continuityEvidence(),clockWitnesses:clockEvidence(),...extra});
+  const empty=(reason,status='UNAVAILABLE',extra={})=>({status,reasonCodes:[reason],messages:[],chart:null,observedAtWall,readMs:performance.now()-started,transport:'PUBLIC_DATA_WINDOW_V2',sourceDomTiming:rpcSourceDomTiming,continuityDecisions:continuityEvidence(),clockWitnesses:clockEvidence(),roiBrr,roiBrrStatus,...extra});
   if(stop){const owned=globalThis.__arrowWindowFeedV2;if(owned?.sessionId===sessionId){owned.observer?.disconnect();if(owned.expiryTimer!==undefined)clearTimeout(owned.expiryTimer);delete globalThis.__arrowWindowFeedV2;}return empty('WINDOW_OBSERVER_STOPPED','STOPPED');}
   if(observationOnly&&globalThis.__arrowWindowFeedV2?.inObserverCallback!==true)return empty('WINDOW_OBSERVER_CONTEXT_REQUIRED');
   // Only a real receiver RPC may renew the separate timing observer's lease.
@@ -160,7 +163,8 @@ export function readTradingViewWindowEvidence({bootstrap,bootstrapHistory,sessio
   const selectedTab=Array.from(document.querySelectorAll('[role="tab"][aria-selected="true"]')).find(node=>/data\s*window/i.test((node.getAttribute('aria-label')??'')+' '+(node.getAttribute('title')??'')+' '+(node.textContent??'')));
   if(!selectedTab||!visibleInViewport(selectedTab))return unavailable('DATA_WINDOW_NOT_SELECTED');
   const studyHeader=row=>Array.from(row.querySelectorAll('span[title]')).find(node=>(node.getAttribute('title')??'').startsWith(expectedStudyTitle))??Array.from(row.querySelectorAll(':scope > div[class*="header-"] > span[class*="headerTitle-"]')).find(node=>!node.getAttribute('title')&&/^Arrow OHLC Window v2(?:\s|\(|$)/.test((node.textContent??'').replace(/\s+/g,' ').trim()));
-  const ownedRows=Array.from(document.querySelectorAll('[role="treegrid"] [role="row"][data-role="menuitem"]')).filter(row=>visible(row)&&studyHeader(row));
+  const studyRows=Array.from(document.querySelectorAll('[role="treegrid"] [role="row"][data-role="menuitem"]'));
+  const ownedRows=studyRows.filter(row=>visible(row)&&studyHeader(row));
   if(ownedRows.length!==1)return unavailable(ownedRows.length?'WINDOW_STUDY_AMBIGUOUS':'WINDOW_STUDY_NOT_FOUND');
   const ownedHeader=studyHeader(ownedRows[0]);
   if(!visibleInViewport(ownedHeader))return unavailable('WINDOW_STUDY_NOT_VISIBLE');
@@ -349,6 +353,32 @@ export function readTradingViewWindowEvidence({bootstrap,bootstrapHistory,sessio
   // cursor hovers over an older bar. Preserve a healthy same-run baseline;
   // the next genuine frame still goes through every normal gap/stale check.
   if(!reset&&state?.identity===identity&&state.series?.[0]?.snapshotSent===true&&state.lastSequence!==null&&sequence<state.lastSequence&&sourceAt<=state.lastSourceAt&&current.time<=state.lastFrame?.current?.time)return unavailable('WINDOW_LAST_BAR_REQUIRED');
+  if(!observationOnly&&allowResearchLiveMultiChart&&liveLayoutName&&meta.instrument==='CME_MINI:NQ1!'&&meta.timeframe==='1'&&meta.tickSize===.25&&
+    chart.documentVisible===true&&chart.marketOpen===true&&chart.realtime!==false&&windowFrame.realtime){
+    const title=/^(?:Roi BRR|Roi \| 5M Break \+ 1M Retest & Rejection) v1\.2(?:\s|\(|$)/;
+    const strategies=studyRows.filter(row=>visible(row)&&Array.from(row.querySelectorAll('span[title], :scope > div[class*="header-"] > span[class*="headerTitle-"]'))
+      .some(header=>[header.getAttribute('title'),header.textContent].some(value=>title.test((value??'').trim()))));
+    roiBrrStatus=strategies.length===0?'NOT_INSTALLED':strategies.length===1?'WAITING_FIELDS':'MULTIPLE_STUDIES';
+    if(strategies.length===1){
+      const fields=new Map();
+      for(const label of strategies[0].querySelectorAll('[data-test-id-value-title^="ARROW_BRR_"]')){
+        const key=label.getAttribute('data-test-id-value-title'),parent=label.parentElement;
+        const rawValue=(parent?.children[1]?.textContent??'').trim().replace(/^\u2212/,'-');
+        if(fields.has(key)||parent?.children.length!==2||parent.children[0]!==label||!/^-?(?:\d{1,16}|\d{1,3}(?:,\d{3}){1,5})$/.test(rawValue)){fields.clear();break;}
+        fields.set(key,Number(rawValue.replaceAll(',','')));
+      }
+      const [protocol,closeTime,side,priceTicks,check]=['PROTOCOL','READY_CLOSE','READY_SIDE','READY_PRICE_TICKS','READY_CHECK'].map(field=>fields.get('ARROW_BRR_'+field));
+      const checksum=((closeTime%1000000007)*131+(side+1)*17+priceTicks)%1000000007;
+      const closed=current.closed?current:previous;
+      if(fields.size===5&&protocol===1&&[closeTime,side,priceTicks,check].every(Number.isSafeInteger)&&check===checksum){
+        roiBrrStatus='WAITING_READY';
+        if(closed&&closeTime===closed.closeTime&&[1,-1].includes(side)&&priceTicks>0&&priceTicks===closed.close/.25&&closeTime<=sourceAt&&sourceAt-closeTime<=15000){
+          roiBrr={kind:'ROI_BRR_LIVE_READY_V1',sessionId,runId:bootstrap.runId,sourceUrl:pageUrl,closeTime,direction:side===1?'LONG':'SHORT',priceTicks,observedAtWall,sourceEmittedAt:sourceAt};
+          globalThis[roiBrrKey]=Object.freeze({...roiBrr,documentTimeOrigin:performance.timeOrigin});roiBrrStatus='READY';
+        }
+      }
+    }
+  }
   // This stamp can be produced only inside our leased, owned observer after
   // validating the complete public numeric frame. Polling a retained packet
   // never creates or refreshes a clock sample. Prices and raw Pine timestamps
@@ -478,6 +508,6 @@ export function readTradingViewWindowEvidence({bootstrap,bootstrapHistory,sessio
   const history=state.series.map((series,index)=>({timeframe:index===0?meta.timeframe:bootstrap.higherTimeframes[index-1].timeframe,retainedBars:series.bars.length,contiguousBars:suffix(index).length,snapshotSent:series.snapshotSent,reasonCodes:series.invalidReason?[series.invalidReason]:[],firstObservations:series.bars.map(bar=>({time:bar.time,firstObservedSourceAt:bar.firstObservedSourceAt,firstObservedDomEpoch:bar.firstObservedDomEpoch}))}));
   if(!baseState.snapshotSent)reasons.push('WINDOW_HISTORY_WARMUP');
   const sourceDomTiming=rpcSourceDomTiming;
-  const output={status:'OK',reasonCodes:[...new Set(reasons)],messages,chart,observedAtWall,readMs:performance.now()-started,transport:'PUBLIC_DATA_WINDOW_V2',frame:state.lastFrame,windowFrame,bootstrapMetadata:bootstrapMetadata??structuredClone(state.bootstrap),resetRequired,history,sourceDomTiming,continuityDecisions:continuityEvidence(),clockWitnesses:clockEvidence(),packetObservations:[...state.pendingMessages.values()].map(item=>item.observation),availabilityPolicy:'SNAPSHOTS_BECOME_AVAILABLE_AT_CURRENT_COHERENT_OBSERVATION;PER_ROW_FIRST_OBSERVATIONS_RETAINED_SEPARATELY'};
+  const output={status:'OK',reasonCodes:[...new Set(reasons)],messages,chart,observedAtWall,readMs:performance.now()-started,transport:'PUBLIC_DATA_WINDOW_V2',frame:state.lastFrame,windowFrame,bootstrapMetadata:bootstrapMetadata??structuredClone(state.bootstrap),resetRequired,history,sourceDomTiming,continuityDecisions:continuityEvidence(),clockWitnesses:clockEvidence(),roiBrr,roiBrrStatus,packetObservations:[...state.pendingMessages.values()].map(item=>item.observation),availabilityPolicy:'SNAPSHOTS_BECOME_AVAILABLE_AT_CURRENT_COHERENT_OBSERVATION;PER_ROW_FIRST_OBSERVATIONS_RETAINED_SEPARATELY'};
   state.latestEvidence=output;return output;
 }

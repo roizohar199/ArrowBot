@@ -1,4 +1,5 @@
 import {validNativeFill} from './fill-marker-payload.mjs';
+import {ROI_BRR_LIVE_ELIGIBILITY} from './roi-brr-live-signal.mjs';
 
 export const TELEGRAM_ORIGIN='https://api.telegram.org/*';
 export const TELEGRAM_CHANNEL='ARROW_TELEGRAM_ALERTS';
@@ -13,7 +14,7 @@ const failure=reason=>({ok:false,reason});
 const directionLabel=direction=>({LONG:'לונג',SHORT:'שורט'}[direction]);
 
 export function telegramLiveSignal(signal){
-  if(signal?.status!=='CONFIRMED'||signal.liveEligibility?.policy!=='POST_BOOTSTRAP_FORMATION_AND_ELIGIBLE_SOURCE_CLOSE')return null;
+  if(signal?.status!=='CONFIRMED'||!['POST_BOOTSTRAP_FORMATION_AND_ELIGIBLE_SOURCE_CLOSE',ROI_BRR_LIVE_ELIGIBILITY].includes(signal.liveEligibility?.policy))return null;
   return {type:'signal',direction:signal.direction,instrument:signal.instrument,timeframe:signal.timeframe,at:signal.confirmationBarCloseTime,price:signal.confirmationClose};
 }
 

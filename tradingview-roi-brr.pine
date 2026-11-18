@@ -1,0 +1,348 @@
+//@version=6
+strategy("Roi | 5M Break + 1M Retest & Rejection v1.2", shorttitle = "Roi BRR v1.2", overlay = true,
+     initial_capital = 50000, currency = currency.USD,
+     default_qty_type = strategy.fixed, default_qty_value = 1, pyramiding = 0,
+     commission_type = strategy.commission.cash_per_contract, commission_value = 2.5,
+     slippage = 1, calc_on_every_tick = false, calc_on_order_fills = false,
+     process_orders_on_close = false, use_bar_magnifier = false, margin_long = 1, margin_short = 1)
+
+// Use standard 1-minute candles. Arrow and the Strategy Tester track setups independently.
+// LONG: confirmed 5M close above a known high -> 1M retest -> bullish rejection.
+// SHORT: confirmed 5M close below a known low -> 1M retest -> bearish rejection.
+// Auto pivots are a transparent proxy, NOT another indicator's proprietary Weak High/Low.
+// HTF data uses [1] + lookahead_on. Since this strategy calculates on 1M closes,
+// a 5M confirmation is processed at the close of the FIRST 1M bar in the next 5M period.
+// That first post-break bar may qualify as a retest; bars inside the break candle cannot.
+// Same-level retries require a NEW confirmed 5M close back on the original side
+// AFTER the previous attempt ends, then a later FRESH 5M break and a new retest.
+// Tester retries start after the simulated attempt ends. Arrow retries start after the signal or setup ends.
+// The Tester's pending stop order can fill on a wick after rejection, without another candle close.
+// Orders here belong to the Strategy Tester; no broker execution or webhook integration.
+// Tester margin is 1% of notional as a simulation setting, not a broker margin quote.
+// Standard historical bar detail: no Premium Bar Magnifier / High detail required.
+
+string G_LEVEL = "1. Levels and direction"
+string G_SETUP = "2. Break and retest"
+string G_RISK = "3. Strategy Tester entry and risk"
+string G_VIEW = "4. Display and alerts"
+
+string levelMode = input.string("Auto 5M pivots", "Level source", options = ["Auto 5M pivots", "Manual levels"], group = G_LEVEL)
+bool allowLong = input.bool(true, "Enable LONG", group = G_LEVEL)
+bool allowShort = input.bool(true, "Enable SHORT", group = G_LEVEL)
+int pivotLeft = input.int(2, "5M pivot: left bars", minval = 1, maxval = 20, group = G_LEVEL)
+int pivotRight = input.int(2, "5M pivot: right confirmation bars", minval = 1, maxval = 20, group = G_LEVEL,
+     tooltip = "A pivot becomes available only after this many additional CLOSED 5M bars. It is never backdated.")
+float manualHigh = input.float(0.0, "Manual HIGH for LONG (0 = disabled)", minval = 0, step = 0.25, group = G_LEVEL)
+float manualLow = input.float(27590.0, "Manual LOW for SHORT (0 = disabled)", minval = 0, step = 0.25, group = G_LEVEL)
+int manualStart = input.time(timestamp("10 Nov 2026 17:10 +0000"), "Manual levels known from", group = G_LEVEL,
+     tooltip = "Set the moment these levels were known. Default: 10 Nov 2026, 19:10 Israel. Prevents testing today's manually selected level on older bars.")
+
+int breakTicks = input.int(1, "5M break buffer (ticks)", minval = 0, group = G_SETUP)
+float retestTolerance = input.float(2.0, "Retest zone +/- points", minval = 0, step = 0.25, group = G_SETUP)
+int rejectionTicks = input.int(1, "Rejection close beyond level (ticks)", minval = 0, group = G_SETUP)
+int maxSetupBars = input.int(20, "Maximum 1M bars after confirmation", minval = 1, maxval = 120, group = G_SETUP)
+int maxRetestBars = input.int(5, "Maximum 1M bars from first retest touch", minval = 1, maxval = 30, group = G_SETUP)
+bool allowSameLevelRetry = input.bool(true, "Allow same-level retry after 5M reset", group = G_SETUP,
+     tooltip = "After an attempt ends: SHORT needs a new CLOSED 5M candle above the low; LONG needs one below the high. Then a LATER fresh break, retest and rejection are required. Disable for one attempt per source level.")
+int resetTicks = input.int(0, "5M reset beyond original side (ticks)", minval = 0, group = G_SETUP)
+
+int entryTicks = input.int(1, "Entry beyond rejection candle (ticks)", minval = 1, group = G_RISK)
+int stopTicks = input.int(2, "Stop beyond retest extreme (ticks)", minval = 1, group = G_RISK)
+int pendingBars = input.int(3, "Pending entry valid for 1M bars", minval = 1, maxval = 30, group = G_RISK)
+float maxEntryDistance = input.float(10.0, "Maximum entry distance from broken level (points)", minval = 0.25, step = 0.25, group = G_RISK)
+float maxStopPoints = input.float(10.0, "Maximum structural stop (points)", minval = 0.25, step = 0.25, group = G_RISK)
+float maxRiskUSD = input.float(150.0, "Maximum estimated risk per trade (USD)", minval = 1, step = 10, group = G_RISK)
+float rewardR = input.float(2.0, "Target / structural risk (R)", minval = 0.25, step = 0.25, group = G_RISK)
+int riskSlippageTicks = input.int(1, "Risk estimate: slippage ticks PER fill", minval = 0, group = G_RISK,
+     tooltip = "Risk estimate adds two fills of slippage. Match this and the commission budget to Strategy Properties. Gaps can still exceed estimates.")
+float riskCommission = input.float(5.0, "Risk estimate: round-trip commission (USD)", minval = 0, step = 0.5, group = G_RISK)
+bool showLevels = input.bool(true, "Show reference levels", group = G_VIEW)
+bool showPanel = input.bool(true, "Show status panel", group = G_VIEW)
+string panelLocation = input.string("Top right", "Status panel position", options = ["Top right", "Top center", "Top left", "Middle right", "Middle center", "Middle left", "Bottom right", "Bottom center", "Bottom left"], group = G_VIEW)
+bool eventAlerts = input.bool(true, "Enable setup / ready alerts", group = G_VIEW,
+     tooltip = "For filled entries/exits use strategy order-fill alerts. READY only means a pending order was created.")
+
+if barstate.isfirst
+    if timeframe.in_seconds() != 60
+        runtime.error("Use this strategy on a STANDARD 1-minute chart.")
+    if not chart.is_standard
+        runtime.error("Use standard candles, not Heikin Ashi, Renko or other synthetic charts.")
+    if syminfo.currency != "USD"
+        runtime.error("This version estimates USD risk. Use a USD-quoted instrument such as NQ or MNQ.")
+    if levelMode == "Manual levels" and manualHigh > 0 and manualLow > 0 and manualHigh <= manualLow
+        runtime.error("Manual HIGH must be above manual LOW; use 0 to disable an unused level.")
+
+f_htf() =>
+    float pl = ta.pivotlow(low, pivotLeft, pivotRight)
+    float ph = ta.pivothigh(high, pivotLeft, pivotRight)
+    float lastLow = ta.valuewhen(not na(pl), pl, 0)
+    float lastHigh = ta.valuewhen(not na(ph), ph, 0)
+    int lowKey = ta.valuewhen(not na(pl), time[pivotRight], 0)
+    int highKey = ta.valuewhen(not na(ph), time[pivotRight], 0)
+    [close[1], close[2], time_close[1], lastLow[1], lastHigh[1], lowKey[1], highKey[1]]
+
+[close5, previousClose5, closedTime5, autoLow, autoHigh, autoLowKey, autoHighKey] = request.security(
+     syminfo.tickerid, "5", f_htf(), gaps = barmerge.gaps_off, lookahead = barmerge.lookahead_on)
+
+bool new5 = not na(closedTime5) and not na(closedTime5[1]) and closedTime5 != closedTime5[1]
+bool manual = levelMode == "Manual levels"
+bool manualKnown = time >= manualStart
+float sourceLow = manual ? (manualKnown and manualLow > 0 ? math.round_to_mintick(manualLow) : na) : autoLow
+float sourceHigh = manual ? (manualKnown and manualHigh > 0 ? math.round_to_mintick(manualHigh) : na) : autoHigh
+int sourceLowKey = manual ? manualStart : autoLowKey
+int sourceHighKey = manual ? manualStart : autoHighKey
+bool knownAtBreak = not manual or closedTime5 - 300000 >= manualStart
+float tick = syminfo.mintick
+float breakBuffer = breakTicks * tick
+float rejectionBuffer = rejectionTicks * tick
+float resetBuffer = resetTicks * tick
+string resetHint = allowSameLevelRetry ? "wait 5M reset or NEW level" : "wait NEW source level"
+
+type BrrSetup
+    int direction = 0
+    bool waiting = false
+    int usedLowKey = na
+    int usedHighKey = na
+    bool lowRearmed = false
+    bool highRearmed = false
+    int lowAttemptEndTime = na
+    int highAttemptEndTime = na
+    int lowResetCloseTime = na
+    int highResetCloseTime = na
+    float frozenLevel = na
+    int breakBar = na
+    int breakCloseTime = na
+    int touchBar = na
+    float retestExtreme = na
+    string note = "Waiting for a fresh confirmed 5M break"
+
+method finish(BrrSetup setup) =>
+    setup.waiting := false
+    if setup.direction == 1
+        setup.highAttemptEndTime := time_close
+    else if setup.direction == -1
+        setup.lowAttemptEndTime := time_close
+
+method detect(BrrSetup setup, bool canStart) =>
+    bool broke = false
+    bool confirmed = false
+    bool cancelled = false
+    // A reset requires a closed 5M candle strictly after the prior attempt ends.
+    if barstate.isconfirmed and not setup.waiting and canStart and new5 and knownAtBreak
+        if allowSameLevelRetry
+            bool resetLow = not na(sourceLow) and not na(setup.lowAttemptEndTime) and sourceLowKey == setup.usedLowKey and not setup.lowRearmed and closedTime5 > setup.lowAttemptEndTime and close5 > sourceLow + resetBuffer
+            bool resetHigh = not na(sourceHigh) and not na(setup.highAttemptEndTime) and sourceHighKey == setup.usedHighKey and not setup.highRearmed and closedTime5 > setup.highAttemptEndTime and close5 < sourceHigh - resetBuffer
+            if resetLow
+                setup.lowRearmed := true
+                setup.lowResetCloseTime := closedTime5
+            if resetHigh
+                setup.highRearmed := true
+                setup.highResetCloseTime := closedTime5
+            if resetLow or resetHigh
+                setup.note := "5M reset confirmed; waiting for a fresh break"
+
+        bool freshLow = not na(sourceLowKey) and (na(setup.usedLowKey) or sourceLowKey != setup.usedLowKey or (allowSameLevelRetry and setup.lowRearmed and closedTime5 > setup.lowResetCloseTime))
+        bool freshHigh = not na(sourceHighKey) and (na(setup.usedHighKey) or sourceHighKey != setup.usedHighKey or (allowSameLevelRetry and setup.highRearmed and closedTime5 > setup.highResetCloseTime))
+        bool shortBreak = allowShort and freshLow and not na(sourceLow) and previousClose5 >= sourceLow - breakBuffer and close5 < sourceLow - breakBuffer
+        bool longBreak = allowLong and freshHigh and not na(sourceHigh) and previousClose5 <= sourceHigh + breakBuffer and close5 > sourceHigh + breakBuffer
+        if shortBreak or longBreak
+            setup.direction := longBreak ? 1 : -1
+            setup.frozenLevel := longBreak ? sourceHigh : sourceLow
+            if longBreak
+                setup.usedHighKey := sourceHighKey
+                setup.highRearmed := false
+                setup.highResetCloseTime := na
+                setup.highAttemptEndTime := na
+            else
+                setup.usedLowKey := sourceLowKey
+                setup.lowRearmed := false
+                setup.lowResetCloseTime := na
+                setup.lowAttemptEndTime := na
+            setup.waiting := true
+            setup.breakBar := bar_index
+            setup.breakCloseTime := closedTime5
+            setup.touchBar := na
+            setup.retestExtreme := na
+            setup.note := "5M break confirmed; waiting for 1M retest"
+            broke := true
+
+    if barstate.isconfirmed and setup.waiting
+        bool timeout = bar_index - setup.breakBar >= maxSetupBars
+        bool reclaimed = setup.direction * (close - setup.frozenLevel) < -retestTolerance
+        bool retestExpired = not na(setup.touchBar) and bar_index - setup.touchBar >= maxRetestBars
+        if timeout or reclaimed or retestExpired
+            setup.finish()
+            cancelled := true
+            setup.note := (timeout ? "Setup expired; " : reclaimed ? "Level reclaimed; " : "Retest expired; ") + resetHint
+        else if time >= setup.breakCloseTime
+            bool touchesZone = high >= setup.frozenLevel - retestTolerance and low <= setup.frozenLevel + retestTolerance
+            if na(setup.touchBar) and touchesZone
+                setup.touchBar := bar_index
+                setup.retestExtreme := setup.direction == 1 ? low : high
+            if not na(setup.touchBar)
+                setup.retestExtreme := setup.direction == 1 ? math.min(setup.retestExtreme, low) : math.max(setup.retestExtreme, high)
+                setup.note := "Retest touched; waiting for directional close beyond level"
+                confirmed := setup.direction * (close - open) > 0 and setup.direction * (close - setup.frozenLevel) > rejectionBuffer
+    [broke, confirmed, cancelled]
+
+// The Arrow detector has no dependency on simulated orders, risk or distance limits.
+var BrrSetup arrowSetup = BrrSetup.new()
+[breakEvent, arrowReady, cancelEvent] = arrowSetup.detect(true)
+bool readyLong = arrowReady and arrowSetup.direction == 1
+bool readyShort = arrowReady and arrowSetup.direction == -1
+if arrowReady
+    arrowSetup.finish()
+    arrowSetup.note := "Retest and rejection confirmed; " + resetHint
+
+// The Strategy Tester uses the same technical rules and its own order lifecycle.
+var BrrSetup testerSetup = BrrSetup.new()
+var int orderBar = na
+var float entryPrice = na
+var float stopPrice = na
+var float targetPrice = na
+var float estimatedRisk = na
+bool testerBlocked = false
+bool tradeEnded = strategy.closedtrades > nz(strategy.closedtrades[1], 0)
+
+if barstate.isconfirmed
+    // Handle completed round trips even when position_size has already returned to zero.
+    if tradeEnded
+        strategy.cancel("L")
+        strategy.cancel("S")
+        orderBar := na
+        testerSetup.finish()
+        testerSetup.note := "Trade closed; " + resetHint
+    else if strategy.position_size != 0
+        testerSetup.note := strategy.position_size > 0 ? "LONG open" : "SHORT open"
+
+    [testerBreak, testerRejection, _] = testerSetup.detect(na(orderBar) and not tradeEnded and strategy.position_size == 0)
+    int direction = testerSetup.direction
+    if testerBreak
+        entryPrice := na
+        stopPrice := na
+        targetPrice := na
+        estimatedRisk := na
+    bool testerOrderReady = false
+    if testerRejection
+        entryPrice := math.round_to_mintick(direction == 1 ? high + entryTicks * tick : low - entryTicks * tick)
+        stopPrice := math.round_to_mintick(testerSetup.retestExtreme - direction * stopTicks * tick)
+        float riskPoints = direction * (entryPrice - stopPrice)
+        float extension = direction * (entryPrice - testerSetup.frozenLevel)
+        estimatedRisk := (riskPoints + 2 * riskSlippageTicks * tick) * syminfo.pointvalue + riskCommission
+        bool validRisk = riskPoints > 0 and riskPoints <= maxStopPoints and estimatedRisk <= maxRiskUSD
+        bool validDistance = extension <= maxEntryDistance
+        if validRisk and validDistance
+            targetPrice := math.round_to_mintick(entryPrice + direction * riskPoints * rewardR)
+            orderBar := bar_index
+            testerSetup.waiting := false
+            testerOrderReady := true
+            testerSetup.note := "READY: pending stop entry"
+            if direction == 1
+                strategy.entry("L", strategy.long, qty = 1, stop = entryPrice, alert_message = "LONG entry filled")
+            else
+                strategy.entry("S", strategy.short, qty = 1, stop = entryPrice, alert_message = "SHORT entry filled")
+        else
+            testerSetup.finish()
+            testerBlocked := true
+            testerSetup.note := (not validDistance ? "SKIPPED: entry too far; " : "SKIPPED: risk exceeds cap; ") + resetHint
+
+    if not na(orderBar) and strategy.position_size == 0 and bar_index > orderBar
+        bool expired = bar_index - orderBar >= pendingBars
+        bool failedClose = direction * (close - testerSetup.frozenLevel) < -retestTolerance
+        bool stopTouched = direction == 1 ? low <= stopPrice : high >= stopPrice
+        if expired or failedClose or stopTouched
+            strategy.cancel("L")
+            strategy.cancel("S")
+            strategy.cancel("LX")
+            strategy.cancel("SX")
+            orderBar := na
+            testerSetup.finish()
+            testerSetup.note := (expired ? "Pending entry expired; " : "Pending entry invalidated; ") + resetHint
+
+    // One alert per close: READY takes priority if the first post-break 1M bar
+    // already contains a valid retest/rejection. Do not suppress it with a SETUP alert.
+    if eventAlerts
+        if testerOrderReady
+            alert((direction == 1 ? "LONG" : "SHORT") + " READY | entry " + str.tostring(entryPrice, format.mintick) + " | SL " + str.tostring(stopPrice, format.mintick) + " | TP " + str.tostring(targetPrice, format.mintick) + " | est. risk USD " + str.tostring(estimatedRisk, "#.##"), alert.freq_once_per_bar_close)
+        else if testerBreak and testerSetup.waiting
+            alert((direction == 1 ? "LONG" : "SHORT") + " SETUP: 5M break confirmed at level " + str.tostring(testerSetup.frozenLevel, format.mintick), alert.freq_once_per_bar_close)
+
+    // The protective bracket is submitted together with the pending entry, then kept
+    // fixed. It never tightens a structural stop to force a trade under the risk cap.
+    if not na(orderBar)
+        if direction == 1
+            strategy.exit("LX", from_entry = "L", stop = stopPrice, limit = targetPrice, alert_message = "LONG exit filled")
+        else
+            strategy.exit("SX", from_entry = "S", stop = stopPrice, limit = targetPrice, alert_message = "SHORT exit filled")
+
+// The chart square and Arrow event share the same confirmed READY condition.
+// Retain the last realtime event so Arrow can read it after the 1M boundary.
+// Recalculating historical bars never republishes an entry event.
+var int arrowReadyClose = 0
+var int arrowReadySide = 0
+var int arrowReadyPriceTicks = 0
+if barstate.isrealtime and barstate.isconfirmed and (readyLong or readyShort)
+    arrowReadyClose := time_close
+    arrowReadySide := readyLong ? 1 : -1
+    arrowReadyPriceTicks := int(math.round(close / syminfo.mintick))
+int arrowReadyCheck = ((arrowReadyClose % 1000000007) * 131 + (arrowReadySide + 1) * 17 + arrowReadyPriceTicks) % 1000000007
+plot(1, "ARROW_BRR_PROTOCOL", display = display.data_window, precision = 0)
+plot(arrowReadyClose, "ARROW_BRR_READY_CLOSE", display = display.data_window, precision = 0)
+plot(arrowReadySide, "ARROW_BRR_READY_SIDE", display = display.data_window, precision = 0)
+plot(arrowReadyPriceTicks, "ARROW_BRR_READY_PRICE_TICKS", display = display.data_window, precision = 0)
+plot(arrowReadyCheck, "ARROW_BRR_READY_CHECK", display = display.data_window, precision = 0)
+
+bool arrowSetupActive = arrowSetup.waiting or arrowReady
+bool testerOrderActive = not na(orderBar)
+plot(showLevels ? sourceLow : na, "Known 5M LOW / manual LOW", color = color.new(color.orange, 45), style = plot.style_stepline)
+plot(showLevels ? sourceHigh : na, "Known 5M HIGH / manual HIGH", color = color.new(color.aqua, 45), style = plot.style_stepline)
+plot(arrowSetupActive ? arrowSetup.frozenLevel : na, "Frozen broken level", color = color.yellow, linewidth = 2, style = plot.style_linebr)
+plot(testerOrderActive ? entryPrice : na, "Planned entry", color = color.white, style = plot.style_linebr)
+plot(testerOrderActive ? stopPrice : na, "Structural SL", color = color.red, linewidth = 2, style = plot.style_linebr)
+plot(testerOrderActive ? targetPrice : na, "Fixed R target", color = color.lime, style = plot.style_linebr)
+bgcolor(arrowSetup.waiting ? color.new(arrowSetup.direction == 1 ? color.aqua : color.orange, 92) : na)
+plotshape(breakEvent and arrowSetup.direction == 1, title = "5M long break", style = shape.diamond, location = location.belowbar, color = color.aqua, size = size.tiny, text = "5M")
+plotshape(breakEvent and arrowSetup.direction == -1, title = "5M short break", style = shape.diamond, location = location.abovebar, color = color.orange, size = size.tiny, text = "5M")
+plotchar(readyLong, title = "LONG ready: Arrow Market", char = "■", location = location.belowbar, color = color.aqua, size = size.small, text = "L")
+plotchar(readyShort, title = "SHORT ready: Arrow Market", char = "■", location = location.abovebar, color = color.orange, size = size.small, text = "S")
+plotshape(cancelEvent, title = "Arrow setup cancelled", style = shape.xcross, location = location.belowbar, color = color.yellow, size = size.tiny)
+plot(testerBlocked ? 1 : 0, "Tester only: stop order skipped by risk/distance cap", display = display.data_window, precision = 0)
+
+f_price(float value) =>
+    na(value) ? "-" : str.tostring(value, format.mintick)
+
+string panelPosition = switch panelLocation
+    "Top right" => position.top_right
+    "Top center" => position.top_center
+    "Top left" => position.top_left
+    "Middle right" => position.middle_right
+    "Middle center" => position.middle_center
+    "Middle left" => position.middle_left
+    "Bottom right" => position.bottom_right
+    "Bottom center" => position.bottom_center
+    => position.bottom_left
+
+var table panel = table.new(panelPosition, 2, 10, bgcolor = color.new(color.black, 15), frame_color = color.gray, frame_width = 1)
+if barstate.islast and showPanel
+    string phase = arrowReady ? "3/3 ARROW READY" : not arrowSetup.waiting ? "0/3 WAIT BREAK" : na(arrowSetup.touchBar) ? "1/3 WAIT RETEST" : "2/3 WAIT REJECTION"
+    string side = not arrowSetupActive ? "-" : arrowSetup.direction == 1 ? "LONG" : "SHORT"
+    table.cell(panel, 0, 0, "Roi BRR v1.2", text_color = color.white)
+    table.cell(panel, 1, 0, phase, text_color = not arrowSetupActive ? color.silver : arrowSetup.direction == 1 ? color.aqua : color.orange)
+    table.cell(panel, 0, 1, "Source", text_color = color.white)
+    table.cell(panel, 1, 1, levelMode, text_color = color.white)
+    table.cell(panel, 0, 2, "HIGH / LOW", text_color = color.white)
+    table.cell(panel, 1, 2, f_price(sourceHigh) + " / " + f_price(sourceLow), text_color = color.white)
+    table.cell(panel, 0, 3, "Arrow side / frozen level", text_color = color.white)
+    table.cell(panel, 1, 3, side + " / " + (arrowSetupActive ? f_price(arrowSetup.frozenLevel) : "-"), text_color = color.white)
+    table.cell(panel, 0, 4, "Tester entry / SL", text_color = color.white)
+    table.cell(panel, 1, 4, testerOrderActive ? f_price(entryPrice) + " / " + f_price(stopPrice) : "-", text_color = color.white)
+    table.cell(panel, 0, 5, "Tester target", text_color = color.white)
+    table.cell(panel, 1, 5, testerOrderActive ? f_price(targetPrice) : "-", text_color = color.lime)
+    table.cell(panel, 0, 6, "Tester risk / cap USD", text_color = color.white)
+    table.cell(panel, 1, 6, (na(estimatedRisk) ? "-" : str.tostring(estimatedRisk, "#.##")) + " / " + str.tostring(maxRiskUSD, "#.##"), text_color = testerBlocked ? color.red : color.white)
+    table.cell(panel, 0, 7, "Arrow setup", text_color = color.white)
+    table.cell(panel, 1, 7, arrowSetup.note, text_color = color.white, text_size = size.small)
+    table.cell(panel, 0, 8, "Tester status", text_color = color.white)
+    table.cell(panel, 1, 8, testerSetup.note, text_color = color.silver, text_size = size.small)
+    table.cell(panel, 0, 9, "Timing", text_color = color.white)
+    table.cell(panel, 1, 9, "5M confirmed; processed next 1M close", text_color = color.silver, text_size = size.small)

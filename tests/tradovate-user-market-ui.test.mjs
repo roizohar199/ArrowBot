@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import {webcrypto} from 'node:crypto';
 import {nativeUserMarketUiCommand} from '../tradovate-user-market-ui.mjs';
 import {makeWindowFixture,makeBootstrap,encodeFrame,recalculateChecksums,rows,SCALAR_BASE} from './window-reader-fixture.mjs';
+import {roiBrrEventId,ROI_BRR_APPROVAL_POLICY} from '../roi-brr-live-signal.mjs';
 
 // Synthetic public-UI component contracts ONLY. No real tab/account, market
 // signal, browser gesture or order is involved in these positive tests.
@@ -95,6 +96,39 @@ function fixture({direction='LONG',quantity=1,knownDelay=145,provider='TRADOVATE
 }
 const marketActions=f=>f.actions.filter(x=>/MARKET/.test(x));
 async function prepared(f){const r=await f.run('prepare');assert.equal(r.status,'READY',JSON.stringify(r));return r;}
+function brrApproval(f,direction){
+  const closeTime=f.sourceBinding.asOfTime,eventId=roiBrrEventId(closeTime,direction),priceTicks=f.sourceBinding.closedBar.close/.25;
+  const permit=structuredClone(f.permit);permit.signal.eventId=eventId;
+  const attemptKey=['execution-attempt-1',f.expected.provider,f.expected.environment,f.expected.nativeAccountId,permit.binding.symbol,eventId].map(encodeURIComponent).join(':');
+  const record=structuredClone(f.record);record.key=attemptKey;record.eventIdentity.eventId=eventId;record.intentBinding.signal=permit.signal;
+  const stamp=f.f.context.Date.now();
+  f.f.context[Symbol.for('arrow.roi-brr-live-observation.v1')]={kind:'ROI_BRR_LIVE_READY_V1',documentTimeOrigin:f.f.context.performance.timeOrigin,
+    sourceUrl:f.sourceBinding.researchUrl,sessionId:f.sourceBinding.sessionId,runId:f.sourceBinding.runId,closeTime,direction,priceTicks,observedAtWall:stamp,sourceEmittedAt:stamp+3700};
+  return {permit,attemptKey,record,technicalEntryWitness:undefined,approvalProof:{kind:'ROI_BRR_MARKET_APPROVAL_V1',approvalPolicy:ROI_BRR_APPROVAL_POLICY,eventId,direction,closeTime,priceTicks}};
+}
+test('fresh Roi BRR uses one native Market click and the unchanged preset for Paper, Evaluation and PA',async()=>{
+  for(const [provider,environment,direction] of [['TRADINGVIEW_PAPER','DEMO','LONG'],['TRADOVATE','EVALUATION','SHORT'],['TRADOVATE','PA','LONG']]){
+    const f=fixture({provider,environment,direction,quantity:2});
+    const brr=brrApproval(f,direction),nativePrepared=await f.run('prepare',brr);
+    assert.equal(nativePrepared.status,'READY',JSON.stringify(nativePrepared));
+    assert.equal(nativePrepared.quantity,2);
+    const submitted=await f.run('submit',{...brr,nativePrepared});
+    assert.equal(submitted.status,'NATIVE_USER_SUBMITTED_UNCONFIRMED',JSON.stringify(submitted));
+    assert.deepEqual(marketActions(f),[direction==='LONG'?'CHART_BUY_MARKET':'CHART_SELL_MARKET']);
+    assert.equal((await f.run('submit',{...brr,nativePrepared})).status,'BLOCKED');
+    assert.equal(marketActions(f).length,1);
+  }
+});
+
+test('native Market preparation and dispatch both require the owned Roi BRR observation',async()=>{
+  const key=Symbol.for('arrow.roi-brr-live-observation.v1');
+  const missing=fixture(),signal=brrApproval(missing,'LONG');delete missing.f.context[key];
+  const refused=await missing.run('prepare',signal);assert.deepEqual(refused.reasonCodes,['NATIVE_USER_ROI_BRR_LIVE_READY_PROOF_REQUIRED']);
+  const expired=fixture(),brr=brrApproval(expired,'LONG'),nativePrepared=await expired.run('prepare',brr);
+  assert.equal(nativePrepared.status,'READY');delete expired.f.context[key];
+  const blocked=await expired.run('submit',{...brr,nativePrepared});
+  assert.equal(blocked.submitted,false);assert.deepEqual(marketActions(expired),[]);
+});
 function durableFill(f,fill){
   f.record.status='FILLED';f.record.history.push({status:'FILLED',phase:'ATTRIBUTED_NATIVE_RECONCILIATION',at:fill.observedAt,proof:{kind:'EXECUTION_ATTEMPT_NATIVE_RECONCILIATION_V1',intentKey:f.record.key,status:'FILLED',attributionVerified:true,fillVerified:true,closedVerified:false,binding:structuredClone(f.record.intentBinding),nativeOrderId:fill.nativeOrderId,direction:fill.direction,quantity:fill.quantity,synthetic:false,testOnly:false,accountEvidence:{kind:'NATIVE_EXECUTION_ACCOUNT_EVIDENCE_V1',...f.record.accountIdentity,origin:'PUBLIC_NATIVE_UI',connected:true,nativeIdentityVerified:true,environmentVerified:true,environmentBasis:'NATIVE_PAPER_PROVIDER_DEMO',observedAt:fill.observedAt,synthetic:false,testOnly:false}}});
 }

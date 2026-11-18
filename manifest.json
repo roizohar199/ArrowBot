@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Arrow Observation Experiment",
-  "version": "0.31.9",
+  "version": "0.32.1",
   "description": "Visual candle observation and versioned candlestick/price-action research alerts with market context, confirmation and risk checks.",
   "minimum_chrome_version": "118",
   "permissions": [

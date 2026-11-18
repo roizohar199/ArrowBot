@@ -5,6 +5,7 @@ import {createLivePaperUserControls} from '../live-paper-user-controls.mjs';
 import {analyzeGuideSignals} from '../guide-signal-engine.mjs';
 import {EXECUTION_ATTEMPT_STORAGE_KEY} from '../execution-attempt-ledger.mjs';
 import {createLiveOhlcStore} from '../live-ohlc-store.mjs';
+import {roiBrrEventId,ROI_BRR_APPROVAL_POLICY} from '../roi-brr-live-signal.mjs';
 
 // Full engine computations on artificial OHLC, wrapped in an artificial trusted
 // LIVE transport contract. No fixture leaves Node, opens a native page or proves
@@ -49,7 +50,8 @@ function fixture({direction='LONG',provider='TRADINGVIEW_PAPER',environment='DEM
     if(['inspect','read_connection'].includes(a.action)){const value=nativeConnection(a.sourceBinding);if(a.action==='inspect'&&holdInspect)await pending;if(a.action==='read_connection'&&holdRead){holdRead=false;await readPending;}return [{result:value}];}
     if(a.action==='disarm')return [{result:{status:'DISARMED',ordersCreated:false}}];
     if(a.action==='prepare'){
-      assert.equal(a.approvalProof.approvalPolicy,'guide_scenarios_v1');assert.ok(a.approvalProof.strategyProofs.length);assert.ok(a.technicalEntryWitness.eligibleSetupIds.length);
+      if(a.approvalProof.approvalPolicy===ROI_BRR_APPROVAL_POLICY)assert.equal(a.approvalProof.kind,'ROI_BRR_MARKET_APPROVAL_V1');
+      else{assert.equal(a.approvalProof.approvalPolicy,'guide_scenarios_v1');assert.ok(a.approvalProof.strategyProofs.length);assert.ok(a.technicalEntryWitness.eligibleSetupIds.length);}
       if(holdPrepare)await pending;
       return [{result:{kind:'EXECUTION_SESSION_NATIVE_PREPARATION_V1',status:'READY',binding:structuredClone(a.permit.binding),direction:a.permit.signal.direction,quantity,privateLeaseId:'fixture-native-private-lease',expiresAt:Math.min(clock+750,a.permit.expiresAt),connection:nativeConnection(a.sourceBinding)}}];
     }
@@ -88,6 +90,30 @@ test('full-engine per-strategy LONG and SHORT use actual observed quantity3, dur
 
 test('bootstrap, TEST, historical close, stale source and invalid current trigger cannot produce a Paper entry',async()=>{
   for(const mutate of [b=>{b.state.bootstrap=true;},b=>{b.item.testOnly=true;},b=>{b.state.eligibleCloseTimes=[];},(b,f)=>{f.ctx.state.lastReceivedAt-=2001;},(b,f)=>{f.ctx.state.current.close=1;}]){const f=fixture();try{await f.inspectArm();const b=f.publish();mutate(b,f);await f.controls.accept(b.item,b.analysis,b.state);assert.equal(f.dispatches.length,0);assert.equal(f.calls.some(a=>a.action==='prepare'),false);}finally{f.close();}}
+});
+
+test('Roi BRR routes through the armed native lifecycle without depending on a Guide strategy decision',async()=>{
+  for(const enabled of [false,true]){
+    const f=fixture({direction:'SHORT',sharedNative:true,surface:'USER_MANAGED_CHART_MARKET'});
+    try{
+      if(enabled)await f.inspectArm();
+      const {item,state}=f.publish(),closed=state.bars.at(-1),closeTime=closed.closeTime;
+      f.ctx.analysis=null;
+      f.ctx.latestEvidence={roiBrr:{kind:'ROI_BRR_LIVE_READY_V1',sessionId:item.sessionId,runId:item.runId,sourceUrl:RESEARCH_URL,
+        direction:'SHORT',closeTime,priceTicks:closed.close/.25,sourceEmittedAt:item.sourceEmittedAt,observedAtWall:item.receivedAt}};
+      item.signal={approvalPolicy:ROI_BRR_APPROVAL_POLICY,direction:'SHORT',eventId:roiBrrEventId(closeTime,'SHORT')};
+      const origin={generation:state.generation,runId:item.runId,closeTime,receivedAt:item.receivedAt};
+      await f.controls.acceptBrr(item,origin);
+      assert.equal(f.dispatches.length,enabled?1:0);
+      if(enabled){
+        const prepare=f.calls.find(call=>call.action==='prepare');
+        assert.equal(prepare.approvalProof.approvalPolicy,ROI_BRR_APPROVAL_POLICY);
+        assert.equal(f.dispatches[0].permit.signal.direction,'SHORT');
+        assert.equal(f.dispatches[0].permit.binding.quantity,3);
+        await f.controls.acceptBrr(item,origin);await f.pulse();assert.equal(f.dispatches.length,1);
+      }
+    }finally{f.close();}
+  }
 });
 
 test('a fresh closed confirmation survives an ordinary trigger retest while structural invalidation still vetoes Market',async()=>{

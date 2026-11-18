@@ -41,6 +41,7 @@ import {createHistoryWarmupController} from './history-warmup-controller.mjs';
 import {createWarmupModel} from './history-warmup-model.mjs';
 import {createLiveResearchUpgrades} from './live-research-upgrades.mjs';
 import {createLiveTelegramControls} from './live-telegram-controls.mjs';
+import {selectRoiBrrLiveSignal,ROI_BRR_APPROVAL_POLICY} from './roi-brr-live-signal.mjs';
 export const LIVE_POLL_INTERVAL_MS=50;
 
 // Context-only continuity, never source freshness or an order permit. A reader
@@ -112,6 +113,7 @@ if(typeof document!=='undefined')initializeLivePage();
 function initializeLivePage(){
   const $=id=>document.getElementById(id),extension=typeof chrome!=='undefined'&&!!chrome.tabs?.query&&!!chrome.scripting?.executeScript;
   const userManagedMode=isUserManagedLiveMode(window.location?.search??'');
+  if(userManagedMode&&$('roi-brr-status'))$('roi-brr-status').hidden=false;
   const telegram=userManagedMode&&extension?createLiveTelegramControls({document,chrome}):null;
   const thresholdProfile=$('guide-threshold-profile');if(userManagedMode&&thresholdProfile){thresholdProfile.hidden=false;thresholdProfile.textContent=`ספים מקלים במידה: סובלנות אזור ${GUIDE_USER_CONTEXT_BALANCED.zoneToleranceTicks} טיקים, קרבה ל־EMA עד ${GUIDE_USER_CONTEXT_BALANCED.emaProximityTicks} טיקים, קצה טווח ${GUIDE_USER_CONTEXT_BALANCED.rangeEdgeFraction*100}%. הגדרות צורת הנר ותנאי האישור נשמרים; SL ו־TP בידיך.`;}
   const store=createLiveOhlcStore(),timeframes=createLiveTimeframes({timeframes:['5','15'],minBars:20}),intrabar=createLiveIntrabar(),analyzer=createGuideAnalyzer(),sourceLatency=createSourceDomLatency(),preopenContext=createPreopenContext({allowResearchLiveMultiChart:userManagedMode}),formingPreview=createGuideFormingPreview(),maxEvidence=500;
@@ -130,7 +132,7 @@ function initializeLivePage(){
   const ruleControls=[...LIVE_RULE_FIELD_IDS,...LIVE_RULE_CHECK_IDS,'live-transport','apply-live-rules','connect-live','refresh-tabs','live-tab','bootstrap-log-tab','popout-live','prepare-window-history','account-profile','edit-account','new-account'];
   for(const id of ruleControls)$(id).disabled=true;
   const storageNote=document.createElement('p');storageNote.className='help';storageNote.textContent='טוען הגדרות מקומיות…';$('apply-live-rules').after(storageNote);
-  let rawEvidence=[],pollEvidence=[],closeBoundarySamples=[],alerts=[],alertIds=new Set(),seenSequences=new Map(),latencyArchives=[],inflightToken=null,lastVisibleAlert=null;
+  let rawEvidence=[],pollEvidence=[],closeBoundarySamples=[],alerts=[],alertIds=new Set(),seenSequences=new Map(),latencyArchives=[],inflightToken=null,lastVisibleAlert=null,roiBrrOrigin=null;
   const accountDependencies={document,storage:extension?chrome.storage?.local:undefined,onInvalidate:reason=>{paperUserControls?.disarm(reason);accountEvaluation={ok:false,reasonCodes:[reason]};if(active)stop(reason);settingsDirty=true;renderState(store.snapshot());updateEvidence();},onProfileApplied:()=>{if(active)stop('ACCOUNT_PROFILE_CHANGED');settingsDirty=true;renderRiskNote();paperControls?.refresh();paperUserControls?.refresh();}};
   const accountControls=userManagedMode?createLiveUserAccountControls({...accountDependencies,readNativeAccount:async({tabId})=>{const before=await chrome.tabs.get(tabId);const rows=await chrome.scripting.executeScript({target:{tabId},func:readTradingViewExecutionAccount,args:[{tabId,url:before.url}],world:'ISOLATED'});const after=await chrome.tabs.get(tabId);if(before.url!==after.url||rows.length!==1)throw Error('ACCOUNT_SOURCE_TAB_CHANGED');return rows[0].result;}}):createLiveAccountControls(accountDependencies);
   paperControls=createLivePaperControls({document,chrome:extension?chrome:undefined,extension,getContext:()=>{
@@ -194,7 +196,7 @@ function initializeLivePage(){
   }
   function captureResearchFill(fill){
     const item=[...alerts].reverse().find(a=>a.runId===selectedRun&&a.signal?.instrument===lastState.metadata?.instrument&&a.signal?.timeframe===lastState.metadata?.timeframe&&a.signal?.confirmationBarCloseTime===fill.latestClosedAt&&a.signal.direction===fill.direction);
-    if(!item)return;
+    if(!item||item.signal.approvalPolicy===ROI_BRR_APPROVAL_POLICY)return;
     const selected=decisionState(lastState);
     research.capture({fill,signal:item.signal,bars:selected.bars,metadata:selected.metadata});
     if(lastAnalysis)scheduleResearch(selected,lastAnalysis);
@@ -365,6 +367,7 @@ function initializeLivePage(){
     return model&&model.generation===state.generation&&model.metadata.sourceId===state.metadata?.sourceId&&last&&tail&&['time','closeTime','open','high','low','close'].every(k=>last[k]===tail[k])?{...state,bars:model.bars,metadata:model.metadata,bootstrapAsOfTime:model.bootstrapAsOfTime}:state;
   }
   function resetWindowSource(reason,{preserveClosedContext=false}={}){
+    roiBrrOrigin=null;
     paperControls?.disarm(reason);
     paperUserControls?.disconnect?.(reason);
     formingPreview.clear();lastFormingPreview=null;lastFormingPreviewReceiptAt=null;previewViews.clear('המקור נבדק מחדש; ממתין לעדכון חי חדש.');
@@ -403,7 +406,9 @@ function initializeLivePage(){
     for(const item of entries.slice(-40).reverse()){
       const event=item.signal,row=document.createElement('tr');
       const account=item.accountReview?.profile,accountLabel=account?` · ${account.label||account.instrument} · ${{PAPER:'דמו',LIVE:'חשבון אמיתי · הגדרה ידנית',RESEARCH:'מחקר'}[account.mode]??account.mode}`:'';
-      for(const text of [stamp(item.receivedAt),`${item.historicalSessionId?'היסטוריה · הפעלה קודמת · ':''}${event.instrument} · ${event.direction==='LONG'?'לונג':'שורט'}${accountLabel}`,(event.patternIds??[]).map(id=>GUIDE_PATTERN_LABELS[id]??id).join(' · ')+` · אישור ${num(event.confirmationClose)} · ביטול ${num(event.invalidation)}`,event.reasonCodes.map(textReason).join(' · ')]){const cell=document.createElement('td');cell.textContent=text;row.append(cell);}tbody.append(row);
+      const brr=event.approvalPolicy===ROI_BRR_APPROVAL_POLICY;
+      const detail=brr?`Roi BRR · אישור ${num(event.confirmationClose)}`:(event.patternIds??[]).map(id=>GUIDE_PATTERN_LABELS[id]??id).join(' · ')+` · אישור ${num(event.confirmationClose)} · ביטול ${num(event.invalidation)}`;
+      for(const text of [stamp(item.receivedAt),`${item.historicalSessionId?'היסטוריה · הפעלה קודמת · ':''}${event.instrument} · ${event.direction==='LONG'?'לונג':'שורט'}${accountLabel}`,detail,brr?'ריבוע L/S בנר סגור · Market לפי הפריסט':event.reasonCodes.map(textReason).join(' · ')]){const cell=document.createElement('td');cell.textContent=text;row.append(cell);}tbody.append(row);
     }
   }
   function archiveCurrentSession(reason){
@@ -459,22 +464,59 @@ function initializeLivePage(){
     }catch(error){record.error=String(error?.message??error).slice(0,200);if(serial===connectionSerial&&run===selectedRun)output.textContent='בדיקת המסירה נכשלה: '+record.error;}
     finally{if(serial===connectionSerial&&run===selectedRun){probeBusy=false;button.disabled=!active||!lastState.ready||!accountEvaluation.ok;}}
   }
+  function registerLiveAlert(signal,packet,pollId,{withSourceTiming=true}={}){
+    const id=packet.runId+':'+signal.eventId;
+    if(alertIds.has(id))return null;
+    alertIds.add(id);if(alertIds.size>1000)alertIds.delete(alertIds.values().next().value);
+    const review=accountControls.snapshot().review;
+    const item={id,sessionId:observerSession,runId:packet.runId,sourceTabId:selectedTabId,receivedAt:packet.receivedAt,sourcePacketId:packet.runId+':'+packet.sequence,sourceEmittedAt:packet.sourceEmittedAt,sourceClockVerified:false,accountReview:{reviewId:review.reviewId,reviewedAt:review.reviewedAt,profile:structuredClone(review.profile),brokerAccountVerified:false,commissionVerified:false,slippageVerified:false,ordersAuthorized:false},signal:structuredClone(signal)};
+    item.readEventId='read:'+pollId;item.approvedAtReceiverEpoch=performance.timeOrigin+performance.now();
+    if(withSourceTiming)item.sourceObservation=sourceLatency.originFor(item.sourcePacketId);
+    boundedPush(alerts,item,500);return item;
+  }
+  function renderRoiBrrSource(evidence){
+    const node=$('roi-brr-status');if(!node||!userManagedMode)return;
+    const labels={NOT_INSTALLED:'Roi BRR v1.2 טרם זוהה בחלון הנתונים.',MULTIPLE_STUDIES:'נמצאו כמה עותקים של Roi BRR v1.2. נדרש עותק אחד בגרף הדקה.',WAITING_FIELDS:'ממתין לשדות האסטרטגיה מחלון הנתונים.',WAITING_READY:'Roi BRR v1.2 זוהה · ממתין לריבוע L או S חדש.',READY:'Roi BRR v1.2 זוהה · קורא אישור L/S מהנר הסגור.'};
+    const message=labels[evidence?.roiBrrStatus]??'Roi BRR · ממתין למקור TradingView חי.';
+    if(node.textContent!==message)node.textContent=message;
+  }
+  function acceptRoiBrr(state,technical){
+    if(!userManagedMode||!windowMode()||!roiBrrOrigin||!accountEvaluation.ok||!accountControls.snapshot().reviewAccepted)return false;
+    const signal=selectRoiBrrLiveSignal(latestEvidence?.roiBrr,state,roiBrrOrigin,{sessionId:observerSession,runId:selectedRun,sourceUrl:lastState.metadata?.sourceUrl,now:Date.now()});
+    if(!signal)return false;
+    if(roiBrrOrigin.handled||alerts.some(item=>item.runId===selectedRun&&item.signal.confirmationBarCloseTime===signal.confirmationBarCloseTime))return true;
+    roiBrrOrigin.handled=true;
+    if(technical?.status==='AMBIGUOUS'||technical?.status==='CONFIRMED'&&technical.direction!==signal.direction){
+      $('signal-state').textContent='כיווני אסטרטגיות סותרים; אין כניסה.';
+      $('signal-state').removeAttribute('data-direction');
+      $('signal-detail').textContent='הכיוון של Roi BRR מתנגש באישור אחר באותו נר.';
+      return true;
+    }
+    const {packet,pollId}=roiBrrOrigin,item=registerLiveAlert(signal,packet,pollId,{withSourceTiming:false});
+    if(!item)return true;
+    if(['TRADINGVIEW_PAPER','TRADOVATE'].includes(accountControls.snapshot().brokerProfile?.provider))void Promise.resolve(paperUserControls?.acceptBrr(item,roiBrrOrigin)).catch(()=>paperUserControls?.disarm('NATIVE_USER_EXECUTION_ERROR'));
+    telegram?.signal(item.signal);
+    lastVisibleAlert=item;$('signal-state').textContent='Roi BRR · '+(signal.direction==='LONG'?'איתות לונג':'איתות שורט');$('signal-state').dataset.direction=signal.direction;
+    $('signal-detail').textContent=`ריבוע L/S אומת בנר סגור במחיר ${num(signal.confirmationClose)}. כניסת Market לפי הפריסט שנבחר.`;
+    renderAlerts();return true;
+  }
+  function tryLateRoiBrr(state){
+    if(!latestEvidence?.roiBrr||!lastAnalysis||settingsDirty||roiBrrOrigin?.handled||state.liveEligible!==true)return;
+    const selected=decisionState(state);
+    acceptRoiBrr(selected,selectGuideTechnicalDecision({analysis:lastAnalysis,bars:selected.bars,asOfTime:lastAnalysis.asOfTime}));
+  }
   function acceptSignals(analysis,state,packet,pollId){
     state=decisionState(state);
     if(!accountEvaluation.ok||!accountControls.snapshot().reviewAccepted)return;
     const technical=userManagedMode?selectGuideTechnicalDecision({analysis,bars:state.bars,asOfTime:analysis.asOfTime}):null;
+    if(acceptRoiBrr(state,technical))return;
     if(userManagedMode&&technical.status!=='CONFIRMED'){$('signal-state').textContent=technical.status==='AMBIGUOUS'?'כיווני אסטרטגיות סותרים; אין כניסה.':'ממתין לאישור חדש לפי תנאי האסטרטגיה.';$('signal-detail').textContent=technical.reasonCodes.join(' · ');return;}
     const fresh=[];
     for(const candidate of analysis.signals??[]){
       const signal=selectFreshLiveSignal(candidate,analysis,{bootstrapAsOfTime:state.bootstrapAsOfTime,eligibleCloseTimes:state.eligibleCloseTimes,bars:state.bars});
       if(!signal)continue;
       if(userManagedMode&&(signal.direction!==technical.direction||signal.confirmationBarCloseTime!==technical.signal.confirmationBarCloseTime))continue;
-      const id=packet.runId+':'+signal.eventId;
-      if(alertIds.has(id))continue;
-      alertIds.add(id);if(alertIds.size>1000)alertIds.delete(alertIds.values().next().value);
-      const review=accountControls.snapshot().review;
-      const item={id,sessionId:observerSession,runId:packet.runId,sourceTabId:selectedTabId,receivedAt:packet.receivedAt,sourcePacketId:packet.runId+':'+packet.sequence,sourceEmittedAt:packet.sourceEmittedAt,sourceClockVerified:false,accountReview:{reviewId:review.reviewId,reviewedAt:review.reviewedAt,profile:structuredClone(review.profile),brokerAccountVerified:false,commissionVerified:false,slippageVerified:false,ordersAuthorized:false},signal:structuredClone(signal)};
-      item.readEventId='read:'+pollId;item.approvedAtReceiverEpoch=performance.timeOrigin+performance.now();item.sourceObservation=sourceLatency.originFor(item.sourcePacketId);boundedPush(alerts,item,500);fresh.push(item);
+      const item=registerLiveAlert(signal,packet,pollId);if(!item)continue;fresh.push(item);
       if(!userManagedMode)void paperControls?.accept(item,analysis,state)?.catch(()=>paperControls?.disarm('PAPER_EXECUTION_ERROR'));
       else if(['TRADINGVIEW_PAPER','TRADOVATE'].includes(accountControls.snapshot().brokerProfile?.provider))void Promise.resolve(paperUserControls?.accept(item,analysis,state)).catch(()=>paperUserControls?.disarm('NATIVE_USER_EXECUTION_ERROR'));
     }
@@ -512,6 +554,7 @@ function initializeLivePage(){
       const evidence=execution[0]?.result,receivedAt=Date.now();
       if(userManagedMode){const currentTab=await chrome.tabs.get(selectedTabId);if(currentTab.url!==reviewedSourceUrl){stop('USER_ACCOUNT_REVIEW_SOURCE_CHANGED');latency.discard(token,'ACCOUNT_SOURCE_TAB_CHANGED');return finish('ACCOUNT_SOURCE_TAB_CHANGED');}if(evidence)evidence.sourceUrl=currentTab.url;}
       latestEvidence=evidence;
+      renderRoiBrrSource(evidence);
       if(userManagedMode&&windowMode()&&evidence?.reasonCodes?.includes('WINDOW_LAST_BAR_REQUIRED')&&receivedAt-lastPointerRepairAt>=1500){
         lastPointerRepairAt=receivedAt;
         const repair=await chrome.scripting.executeScript({target:{tabId:selectedTabId},func:prepareTradingViewWindowUi,args:[{allowResearchLiveMultiChart:true,clearHistoricalPointer:true,sourceUrl:reviewedSourceUrl}],world:'ISOLATED'});
@@ -571,7 +614,9 @@ function initializeLivePage(){
       if(!fresh.length){
         let state=store.snapshot(receivedAt),proof=null;
         if(state.metadata){proof=verifyLiveChart({metadata:state.metadata,runId:selectedRun,realtime:true,sourceEmittedAt:state.sourceDecisionTime,bars:[state.current??state.bars.at(-1)]},evidence,selectedTabId,providerOptions());accountEvaluation=accountControls.evaluateMetadata(state.metadata,selectedTabId);if(!proof.identityValid||evidence.chart?.replay===true){store.disconnect(!proof.identityValid?'CHART_IDENTITY_MISMATCH':'REPLAY_SOURCE');lastVisibleAlert=null;state=store.snapshot(receivedAt);}state={...state,liveEligible:state.liveEligible&&proof.liveVerified&&accountEvaluation.ok&&(!windowMode()||!windowClock?.snapshot().requiresRebaseline&&!windowClock?.shouldBlockIntake())};}
-        if(!renderWindowWarmup(evidence,receivedAt))renderState(state,[...parseErrors,...(proof?.reasonCodes??[])]);status(windowMode()&&!state.ready?'אוסף היסטוריה מחלון הנתונים; התרעות ממתינות לחימום.':state.stale?'אין עדכון מקור חדש; הנתונים התיישנו.':'מחובר; ממתין לעדכון מקור חדש.',state.stale?'error':'');updateEvidence(false);latency.discard(token,'NO_FRESH_SOURCE_PACKET');return finish('NO_FRESH_SOURCE_PACKET',[...parseErrors,...(proof?.reasonCodes??[])]);
+        if(!renderWindowWarmup(evidence,receivedAt))renderState(state,[...parseErrors,...(proof?.reasonCodes??[])]);
+        tryLateRoiBrr(state);
+        status(windowMode()&&!state.ready?'אוסף היסטוריה מחלון הנתונים; התרעות ממתינות לחימום.':state.stale?'אין עדכון מקור חדש; הנתונים התיישנו.':'מחובר; ממתין לעדכון מקור חדש.',state.stale?'error':'');updateEvidence(false);latency.discard(token,'NO_FRESH_SOURCE_PACKET');return finish('NO_FRESH_SOURCE_PACKET',[...parseErrors,...(proof?.reasonCodes??[])]);
       }
       const observedAsOfTime=Math.max(...parsed.filter(r=>r.packet.runId===selectedRun).map(r=>r.packet.sourceEmittedAt));
       // One coherent source batch publishes base, 5m and 15m snapshots in that
@@ -609,7 +654,11 @@ function initializeLivePage(){
             deferBootstrapAnalysis=false;analyzeClosedState(state);
             // Preserve the original packet and latency origin of a genuine
             // new confirmation; deferred context never enters this gate.
-            if(state.liveEligible)acceptSignals(lastAnalysis,state,packet,pollId);
+            if(state.liveEligible){
+              const closeTime=state.bars.at(-1)?.closeTime;
+              if(userManagedMode&&windowMode()&&state.eligibleCloseTimes.includes(closeTime))roiBrrOrigin={packet,pollId,closeTime,receivedAt:packet.receivedAt,generation:state.generation,runId:packet.runId};
+              acceptSignals(lastAnalysis,state,packet,pollId);
+            }
           }else deferBootstrapAnalysis=true;
         }
         if(state.accepted)renderFormingPreview(state);
@@ -619,6 +668,7 @@ function initializeLivePage(){
       // Analyze its latest accepted baseline after all causal context arrives,
       // without generating a historical approval or substituting its origin.
       if(deferBootstrapAnalysis&&lastState.ready&&!settingsDirty&&accountEvaluation.ok){analyzeClosedState(lastState);renderFormingPreview(lastState);}
+      tryLateRoiBrr(lastState);
       history24?.updateLive(history24Context());
       if(seenSequences.size>16)seenSequences.delete(seenSequences.keys().next().value);
       boundedPush(pollEvidence,{pollId,readStartedAt,readFinishedAt,readStartedAtWall,receivedAt,transportAndReadMs:readFinishedAt-readStartedAt,sourceReadMs:evidence.readMs??null,sourcePacketIds:processed,parserReasons:unique(parseErrors),resultStatus:lastState.status,liveEligible:lastState.liveEligible},600);
@@ -689,7 +739,7 @@ function initializeLivePage(){
   }
   async function exportEvidence(){
     let sourceWakeDiagnostics=null;if(wakeAvailable&&windowMode()&&selectedTabId&&observerSession)try{const result=await chrome.scripting.executeScript({target:{tabId:selectedTabId},func:windowWakeSourceCommand,args:[{action:'read',sessionId:observerSession}],world:'ISOLATED'});sourceWakeDiagnostics=result[0]?.result??null;}catch{}
-    const content={schemaVersion:1,extensionVersion:'0.31.9',kind:'LIVE_OHLC_OBSERVATION',executionMode:userManagedMode?'USER_MANAGED_ANALYSIS':'LEGACY_RESEARCH',exportedAt:new Date().toISOString(),source:windowMode()?'Personal TradingView public Data Window bridge':'Personal TradingView finite Pine Logs bridge',sourceTransport:activeTransport,scope:'Current observation connection only. Prior alerts, deliveries and timing summaries are separately grouped under sessionHistory/latencyArchives and are never current-run approval evidence. Source OHLC, confirmed provider HTFs, observed intrabar updates and first extension-observed coherent source DOM frame to result rendering opportunities. No exchange/capture/physical-display measurement. Window volume is quantized to 6 decimals.',windowEvidence:windowMode()?lastWindowEvidence:null,pollIntervalMs:LIVE_POLL_INTERVAL_MS,orderEligible:false,
+    const content={schemaVersion:1,extensionVersion:'0.32.1',kind:'LIVE_OHLC_OBSERVATION',executionMode:userManagedMode?'USER_MANAGED_ANALYSIS':'LEGACY_RESEARCH',exportedAt:new Date().toISOString(),source:windowMode()?'Personal TradingView public Data Window bridge':'Personal TradingView finite Pine Logs bridge',sourceTransport:activeTransport,scope:'Current observation connection only. Prior alerts, deliveries and timing summaries are separately grouped under sessionHistory/latencyArchives and are never current-run approval evidence. Source OHLC, confirmed provider HTFs, observed intrabar updates and first extension-observed coherent source DOM frame to result rendering opportunities. No exchange/capture/physical-display measurement. Window volume is quantized to 6 decimals.',windowEvidence:windowMode()?lastWindowEvidence:null,pollIntervalMs:LIVE_POLL_INTERVAL_MS,orderEligible:false,
       active,selectedTabId,selectedRun,paperExecution:paperControls?.snapshot()??null,paperUserExecution:paperUserControls?.snapshot()??null,paperQuickStart:paperQuickStart?.snapshot()??null,candleMarkers:candleMarkers?.snapshot()??null,history24:history24?.exportState()??null,warmup3000:warmup?.snapshot()??null,warmupModel:warmupModel.snapshot(),preopenContext:{...preopenContext.snapshot({includeHistory:true}),readSource:preopenReadSource},formingPreview:lastFormingPreview,formingPreviewReceivedAt:lastFormingPreviewReceiptAt,formingDisplay:formingView.snapshot(),closestStrategy:closestView.snapshot(),closestStrategyJournal:closestJournal.snapshot(),researchUpgrades:research.snapshot(),observationSession:{sessionId:observerSession,runId:selectedRun,sourceTabId:selectedTabId,startedAtWall:sessionStartedAtWall,scope:'CURRENT_CONNECTION_ONLY'},settingsDirty,appliedOptions,windowClockCorrelation:windowClock?.snapshot()??null,pointerRecovery,sourceWakeDiagnostics,pollScheduler:pollScheduler?.snapshot()??null,runtimeDiagnostics:runtimeDiagnostics.snapshot(),alertDelivery,deliveryProbes,account:accountControls.snapshot(),accountReasonCodes:accountEvaluation.reasonCodes,store:lastState,retainedStoreClockState:store.snapshot(),timeframes:timeframes.snapshot({asOfTime:lastState.decisionAsOfTime??undefined}),intrabar:intrabar.snapshot(),analysisInputs:lastAnalysis?lastAnalysisInputs:null,latestAnalysis:lastAnalysis,explanation:lastExplanation,alerts,rawEvidence,pollEvidence,closeBoundarySamples,sourceDomLatency:sourceLatency.snapshot(),latency:{...latency.snapshot(),receiptBoundary:'Before chrome.scripting.executeScript starts reading the source tab DOM',marketToDisplayMeasured:false,captureToDisplayMeasured:false},latencyArchives,sessionHistory};
     const url=URL.createObjectURL(new Blob([JSON.stringify(content,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='arrow-live-ohlc-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
