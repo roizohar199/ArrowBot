@@ -1,0 +1,74 @@
+{
+  "version": "0.13.0",
+  "asOf": "2026-11-14",
+  "language": "he",
+  "userObjective": "בכל עדכון לסווג מצב שוק, לבדוק במקביל תבניות ותרחישים מהמדריך, ולהציג את המתאים עם הסבר; אישור רק כשכל תנאי החובה מתקיימים. אין כפיית עסקה ואין ביצוע אוטומטי.",
+  "firmConfirmedByUser": "Apex Trader Funding via Tradovate",
+  "accountScreenshotFacts": {
+    "initialBalance": 50000,
+    "currentBalance": 49545.10,
+    "totalProfit": -454.90,
+    "minimumPayoutBalance": 52600,
+    "daysTraded": 7,
+    "requiredDaysDisplayed": 8,
+    "fiveDays50Met": true,
+    "highestTradingDayProfit": 386.40,
+    "lastDisplayedDayPnl": -1458.40,
+    "displayedTrailingDrawdownWidgetDollars": 843,
+    "widgetMeaningVerified": false,
+    "openPnlDisplayed": 0,
+    "inference": "52,600 minimum payout / 8 days / 30 percent consistency match Legacy PA 50K; do not infer the exact liquidation price or current account health from rounded widget or old screenshots.",
+    "privacy": "Do not print account identifiers or embed screenshots containing account IDs in the manual. Facts are user supplied, not a live account connection."
+  },
+  "layout": {
+    "original": "Full Screens Live has 3 user charts and must remain untouched",
+    "research": "https://www.tradingview.com/chart/ARROWRV1/",
+    "source": "One visible standard-candle NQ chart, 1 minute, in separate research Chrome window",
+    "higher": "5 and 15 minute confirmed provider bars via Pine request.security; no extra visible charts needed",
+    "limits": "Does not semantically read all user indicators/drawings/other chart timeframes. Current adapter needs one source chart and base below 5 minutes. User may keep original 3 charts open; keep research source active, visible and unminimized."
+  },
+  "newHistory": {
+    "actualNqVerified": "100 base / 100 five-minute / 100 fifteen-minute bars; actual 15m 2026-11-12 22:00 to23:00 UTC closure with consecutive provider indices and last/first session flags",
+    "burstCharacters": 67582,
+    "contextOnly": true,
+    "liveEligible": false,
+    "boundary": "Preload bounded 3 Pine log snapshots once before open. Then continuous numeric Data Window, no continuing price logs. Two fresh realtime coherent frames required after open. Removes structural five-hour wait; not a guarantee of zero-ms network readiness or an immediate opening-bar signal. First fresh intake is a nonactionable baseline; only new formations followed by later closed confirmation qualify."
+  },
+  "risk": {
+    "budgetDollars": 200,
+    "maxNqContracts": 1,
+    "tickSize": 0.25,
+    "pointValue": 20,
+    "publishedCommissionRoundTrip": 3.10,
+    "illustrativeSlippageTicksRoundTrip": 2,
+    "illustrativeStop37TicksAllIn": 198.10,
+    "illustrativeStop38TicksAllIn": 203.10,
+    "limits": "Published commission is not authenticated personal account fee; slippage2 is an explicit planning assumption, not measured. Planned $200 does not guarantee actual loss cap. Do not shorten a structural stop to force approval. Arrow is not aware of actual netliq, liquidation floor, other positions, daily losses or PA compliance. If843 is remaining cushion,200 is23.7percent ofit, not a recommendation to risk that amount."
+  },
+  "officialSources": [
+    {"url":"https://dashboard.apextraderfunding.com/agreement/user-agreement","facts":"Signals/alerts and chart analysis may assist manual decisions if they do not interact with order submission. Each order initiated manually; native manually configured SL/TP permitted. No automatic bot order placement/modification/cancellation. Own-account copying has separate manual-origin restrictions."},
+    {"url":"https://apextraderfunding.com/legacy-products/","facts":"Current official sales page offers limited-time Legacy Tradovate50K FULL: target3000, trailing2500, max10mini, no dailyDD, monthlysubscription. Do not confuse with new EOD/Intraday50K. An older help overview still says retired; verify chosen cart/product terms. No purchase action performed."},
+    {"url":"https://apextraderfunding.com/help-center/evaluation-accounts-ea/legacy-evaluation-rules/","facts":"Legacy normalminimum7tradingdays unlessspecificpromotion; netprofit target aftercosts. Tradovate legacy evaluation trailing follows unrealized high and doesnotstop duringevaluation. Allflatby16:59ET. PAviolationnoreset."},
+    {"url":"https://apextraderfunding.com/help-center/legacy-products/legacy-performance-account-pa-trading-rules/","facts":"Legacy PA hascontractscaling,30percentMAE, maxrisk5timesreward, nohedging, onedirection. For50K initialmax5mini untilappropriateEOD52600 andnextsession; usercap1stricter. These do not describe new EOD/Intraday PA."},
+    {"url":"https://apextraderfunding.com/help-center/legacy-helpful-items/legacy-30-negative-p-l-rule-mae/","facts":"OpennegativePnL30percentofstartofdayprofit; new/lowprofitLegacy50Kreference30percentof2500=750; growingaccountconditionschangeallowance. This is not daily loss limit, must monitorallopenexposure."},
+    {"url":"https://apextraderfunding.com/help-center/legacy-payouts/legacy-pa-payout-parameters/","facts":"LegacyPA8days,5days>=50,30percenthighestdayconsistency,50Kminimum52600; minpayout500, firstfive50Kmax2000. Safety-net exceptions andpayoutstatusmatter.7/8andnegativeprofitdonotbecomeeligiblebecauseconsistencycolumngreen/N/A."},
+    {"url":"https://apextraderfunding.com/help-center/tradovate/tradovate-commission-instruments/","facts":"OfficialApexTradovateNQ1.55perside,3.10roundturn; verifyactualPerformancefees. NQ20perpoint,0.25tick fromCME/source."},
+    {"url":"https://apextraderfunding.com/help-center/tradovate/setting-up-tradovate/","facts":"ApexPA/evaluation canappearunderTradovateSimulation; labeldoesnotmeanwrongaccount. Verifyaccountidentifierbeforeeverymanualtrade. KeepnativeTradovateopenforriskandpositionmonitoring/backupclosing. Marketdataactivationnotinstant; paidsubscriptionentitlementnotprovenbyArrowfreshness."},
+    {"url":"https://support.ninjatrader.com/s/article/Risk-Settings-Tradovate?language=en_US","facts":"Trailingriskfollowsaccountvalueincludingunrealizedprofit. Risklimitscanclosepositions/lockaccount andapplyacrossplatforms. PropfirmcontrolledparameterscannotbeoverriddenbyTradovate. Do not instruct weakening/increasinglimits."},
+    {"url":"https://www.cmegroup.com/markets/equities/sp-500-and-nasdaq-100-futures.html","facts":"RegularGlobexSunday17:00CT throughFriday16:00CT,daily16to17CTbreak. ForNov15/16 2026 regularnextopenSunday23UTC=Monday01Israel; RTH09:30ET=16:30Israel isdifferentfromGlobexopen. Apex16:59ET=23:59Israel inthatweek; recheckDSTandholidayclose."}
+  ],
+  "operationalMustCover": [
+    "Clear quick-start and go/no-go checklist, source1min plus5/15 and original3layout unchanged",
+    "Prepare history, visible own Pine bootstrap logs, load before market open; DataWindow source visible and fresh-live verification separate from context-ready",
+    "Per-start account review, exact symbol/month matching, NQvsMNQ, standard candles, Replayoff, source awake/nohidden|minimized, costs andrisk1contract200",
+    "Candidate/forming vs confirmed later closed signal; families evaluated in parallel; no forced entry; contradictions/unknown reject; final rule counts root will fill after tests",
+    "Manual Tradovate entry, native manually configured protection, recalculate risk if price moves; neverassume a fill or followstaleprice",
+    "ArrowStop only stopsmonitoring and DOESNOT flatten/cancel any brokerageorders; native Exit All is a consequential user action, agent hasnotclicked it",
+    "Separate PAandEval profiles/positions/risk;200eachwould400aggregate; do not changeor share account credentials",
+    "Daily current riskfloor/cushion and existing exposure independent from nominal50K and payoutshortfall; do not treat843rounded as exactliquidationprice",
+    "Troubleshooting stale/missing/coherence/HTF/clock/replay/blockedrisk; safely stopandrestart, nohistoricalalerts; exportdata and saveproof",
+    "End-of-day allflat/cancelworkingordersbyApexdeadline checkedusernativeplatform; exportjournal; sourcesanddate",
+    "Before Monday realNQlatency/positive afteropen remains untested whileSaturdayclosed; codechecks/historyprimingnotproofprofitability or allfutureconditions",
+    "Do not recommendbuyingLegacyorexecuteanytrade/purchase; explaincurrentproductcomparison andwhichtermsverify"
+  ]
+}

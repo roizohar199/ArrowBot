@@ -1,0 +1,18 @@
+{
+  "provenance": "Unchanged decoded RGBA crop from actual TradingView browser JPEG screenshot; PNG and gzip preserve the decoded compressed pixels.",
+  "source": "verification/tradingview-live/series-000.jpg",
+  "sourceSha256": "b0246e81887f3b4eb972f08f90145d19965308fb55bec9734f2b459f1928af97",
+  "sourceImage": {
+    "width": 1920,
+    "height": 798
+  },
+  "crop": {
+    "x": 836,
+    "y": 470,
+    "width": 16,
+    "height": 20
+  },
+  "rgbaSha256": "09c88624c2d0a722253dce3dd13814a169f67f9d817db26d28e186c15d396390",
+  "annotation": "Indicator/UI icon near chart bottom. It has no candlestick body or active bar identity.",
+  "scope": "One negative real-capture icon fixture; does not establish general icon rejection."
+}

@@ -1,0 +1,38 @@
+{
+  "provenance": "Unchanged decoded RGBA pixels cropped from actual TradingView browser screenshot series-000.jpg. The screenshot was JPEG; PNG and gzip do not restore lost detail or remove compression artifacts.",
+  "source": "verification/tradingview-live/series-000.jpg",
+  "sourceSha256": "b0246e81887f3b4eb972f08f90145d19965308fb55bec9734f2b459f1928af97",
+  "sourceImage": {
+    "width": 1920,
+    "height": 798
+  },
+  "crop": {
+    "x": 738,
+    "y": 270,
+    "width": 104,
+    "height": 170
+  },
+  "rgbaSha256": "f47fbeeb9cbda277d282087cd74c31ce09f5ca0bc6ebb9ff3e1b7b66e5d8c633",
+  "independentBodyCenters": [
+    741,
+    747,
+    753,
+    759,
+    765,
+    771,
+    777,
+    783,
+    789,
+    795,
+    801,
+    807,
+    813,
+    819,
+    825,
+    831,
+    837
+  ],
+  "annotationSource": "verification/tradingview-live/manual-annotations.json, independent body count before detector output",
+  "knownMissingCenter": 789,
+  "scope": "One close-packed red/teal crop from one screenshot; no claim of general precision/recall. Width/height and center coordinates above refer to original screenshot; fixture tests translate centers into crop coordinates."
+}

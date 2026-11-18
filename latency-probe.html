@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arrow · בדיקת השהיית תצוגה</title>
+  <link rel="stylesheet" href="latency-probe.css">
+</head>
+<body>
+  <main>
+    <header><span class="brand" dir="ltr">Arrow</span><h1>בדיקת השהיית תצוגה</h1></header>
+    <p class="intro">הבדיקה מתחברת ללוח Arrow הפעיל בלי לעצור את השיתוף. היא קוראת מידע מהפריימים שכבר מגיעים וממתינה להזדמנות ציור בדפדפן.</p>
+    <section class="controls" aria-label="בקרת בדיקה">
+      <button id="feature" class="primary">בדיקת זמינות חותמת צילום · 3 תמונות</button>
+      <button id="measure">מדידת צילום עד תצוגה · 30 שניות</button>
+      <button id="stop" disabled>עצירת בדיקה</button>
+      <button id="download" disabled>הורדת תוצאות JSON</button>
+    </section>
+    <p id="status" role="status">מוכן לבדיקה. השאירו מעקב פעיל וקיצורי מסחר כבויים בלוח אחד.</p>
+    <section class="readout" aria-labelledby="result-title">
+      <h2 id="result-title">תוצאה</h2>
+      <dl>
+        <div><dt>תמונות שנצפו</dt><dd id="frames" dir="ltr">—</dd></div>
+        <div><dt>חותמת צילום תקינה</dt><dd id="metadata" dir="ltr">—</dd></div>
+        <div><dt>עדכוני תצוגה שנמדדו</dt><dd id="paints" dir="ltr">—</dd></div>
+        <div><dt>חציון · חלון ציור בדפדפן</dt><dd id="median" dir="ltr">—</dd></div>
+        <div><dt>אחוזון 95 · חלון ציור בדפדפן</dt><dd id="p95" dir="ltr">—</dd></div>
+      </dl>
+      <p id="detail">טרם נבדקו נתוני הצילום.</p>
+    </section>
+    <section class="scope">
+      <h2>מה נמדד</h2>
+      <p>כאשר הדפדפן מספק <bdi>captureTime</bdi> תקין, מוצג חלון הזמן מחותמת הצילום עד שתי הזדמנויות ציור עוקבות של תוצאת הנרות בלוח הגלוי. זו הערכת תזמון בדפדפן; אין כאן מדידה של זמן הופעת פיקסלים פיזיים על המסך.</p>
+      <p>חותמת המדיה של הפריים וזמן קבלת הפריים אינם תחליף לחותמת צילום. אם אין חותמת תקינה, ההשהיה הכוללת תסומן כלא זמינה.</p>
+      <p>בתחילת הבדיקה לשונית הלוח מופעלת ואזור נתוני הנרות מוצג. בסיום חוזרים לכאן והחיבור הזמני מוסר. לא מופעלים קיצורי מסחר, לא מצולם מקור נוסף ולא נשלחים נתונים לשירות חיצוני.</p>
+    </section>
+    <details><summary>מידע טכני מהבדיקה</summary><pre id="technical" dir="ltr">—</pre></details>
+  </main>
+  <script type="module" src="latency-probe.mjs"></script>
+</body>
+</html>

@@ -1,0 +1,422 @@
+//@version=6
+// Arrow research source build0.15.6: recent-history priority, protocol3.
+indicator("Arrow OHLC Window v2", overlay = true, dynamic_requests = true, calc_bars_count = 102, format = format.price, precision = 0)
+
+// Continuous public Data Window transport. Exactly64 numeric plots replace
+// their values; metadata rides in the21 historical fields periodically. One
+// optional bounded bootstrap burst is the ONLY logging; no recurring logs.
+int historyCount = input.int(100, "Confirmed history per timeframe", minval = 20, maxval = 100)
+bool emitBootstrap = input.bool(true, "Emit one bounded pre-session bootstrap (open Pine Logs before update)")
+string higherOne = input.timeframe("5", "Confirmed higher timeframe 1")
+string higherTwo = input.timeframe("15", "Confirmed higher timeframe 2")
+int timeOrigin = 1577836800000
+int scalarBase = 1000000000000
+int priceBase = 20000000000
+int priceBias = 10000000000
+int volumeMissing = 999999999999
+int historyHoldMs = 200
+varip int runEpoch = timenow
+varip int sourceSequence = 0
+varip int historySlot = 99
+varip int historyScanSlot = 99
+varip int recentHistorySlot = 0
+varip int recentHistoryRemaining = 0
+varip bool recentHistoryTurn = true
+varip int recentHistoryBaseTime = na
+varip int historyPhase = 0
+varip int lastHistoryRotation = na
+varip array<float> payload = array.new<float>(58, na)
+var string compactMetadata = "3|" + ticker.standard(syminfo.tickerid) + "|" + timeframe.period + "|" + syminfo.timezone + "|" + syminfo.session + "|" + syminfo.currency
+varip bool bootstrapEmitted = false
+varip array<int> metadataWords = array.new<int>(21, 0)
+varip bool metadataBuilt = false
+varip bool metadataSupported = false
+
+max_bars_back(time, 102)
+max_bars_back(time_close, 102)
+max_bars_back(open, 102)
+max_bars_back(high, 102)
+max_bars_back(low, 102)
+max_bars_back(close, 102)
+max_bars_back(volume, 102)
+bool confirmedSeries = barstate.isconfirmed
+max_bars_back(confirmedSeries, 102)
+bool sessionFirstSeries = session.isfirstbar
+bool sessionLastSeries = session.islastbar
+max_bars_back(sessionFirstSeries, 102)
+max_bars_back(sessionLastSeries, 102)
+int providerIndexSeries = bar_index
+max_bars_back(providerIndexSeries, 102)
+
+asciiCode(string character) =>
+    int digit = str.pos("0123456789", character)
+    int upper = str.pos("ABCDEFGHIJKLMNOPQRSTUVWXYZ", character)
+    int lower = str.pos("abcdefghijklmnopqrstuvwxyz", character)
+    int result = na
+    if not na(digit)
+        result := 48 + digit
+    else if not na(upper)
+        result := 65 + upper
+    else if not na(lower)
+        result := 97 + lower
+    else
+        result := switch character
+            " " => 32
+            "!" => 33
+            '"' => 34
+            "#" => 35
+            "$" => 36
+            "%" => 37
+            "&" => 38
+            "'" => 39
+            "(" => 40
+            ")" => 41
+            "*" => 42
+            "+" => 43
+            "," => 44
+            "-" => 45
+            "." => 46
+            "/" => 47
+            ":" => 58
+            ";" => 59
+            "<" => 60
+            "=" => 61
+            ">" => 62
+            "?" => 63
+            "@" => 64
+            "[" => 91
+            "\\" => 92
+            "]" => 93
+            "^" => 94
+            "_" => 95
+            "`" => 96
+            "{" => 123
+            "|" => 124
+            "}" => 125
+            "~" => 126
+            => na
+    result
+
+fixedDuration(string tf) =>
+    bool seconds = str.endswith(tf, "S")
+    float count = str.tonumber(seconds ? str.substring(tf, 0, str.length(tf) - 1) : tf)
+    not na(count) and count > 0 ? count * (seconds ? 1000 : 60000) : na
+
+priceSupported(float value) =>
+    not na(value) and value > -1000000 and value < 1000000 and math.abs(value - math.round(value * 10000) / 10000.0) <= math.max(0.000000001, math.abs(value) * 0.00000000000001)
+
+encodeScalar(int value, int tag) =>
+    not na(value) and value >= 0 and value < scalarBase ? tag * scalarBase + value : int(na)
+
+encodeTime(int value, int tag) =>
+    not na(value) and value >= timeOrigin and value - timeOrigin < scalarBase ? tag * scalarBase + value - timeOrigin : int(na)
+
+encodePrice(float value, int tag) =>
+    priceSupported(value) ? tag * priceBase + int(math.round(value * 10000)) + priceBias : int(na)
+
+encodeVolume(float value, int tag) =>
+    // Volume is explicitly QUANTIZED to6 decimals, not claimed exact.
+    // Negative, absent or overflowing values become the missing sentinel.
+    int units = not na(value) and value >= 0 and value < 1000000 ? int(math.round(value * 1000000)) : volumeMissing
+    tag * scalarBase + (units >= 0 and units < volumeMissing ? units : volumeMissing)
+
+// Return only the requested context's LAST fixed numeric matrix. Every data
+// field references offset>=1 with lookahead_on at the requests: no developing
+// requested candle and no historical future data. Serialize nothing here.
+confirmedData(float desiredDuration) =>
+    varip matrix<float> cached = na
+    varip int cachedOpen = na
+    varip int count = 0
+    if barstate.islast and (na(cachedOpen) or cachedOpen != time)
+        if na(cached)
+            cached := matrix.new<float>(historyCount, 10, na)
+        int available = math.min(historyCount, bar_index)
+        count := 0
+        if available > 0
+            for offset = 1 to available
+                bool valid = not na(time_close[offset]) and time_close[offset] - time[offset] == desiredDuration and not na(open[offset]) and not na(high[offset]) and not na(low[offset]) and not na(close[offset])
+                bool adjacent = offset == 1 or time_close[offset] == time[offset - 1] or time_close[offset] < time[offset - 1] and sessionLastSeries[offset] and sessionFirstSeries[offset - 1]
+                if not valid or not adjacent
+                    break
+                count += 1
+        if count > 0
+            for row = 0 to count - 1
+                int offset = count - row
+                matrix.set(cached, row, 0, time[offset])
+                matrix.set(cached, row, 1, time_close[offset])
+                matrix.set(cached, row, 2, open[offset])
+                matrix.set(cached, row, 3, high[offset])
+                matrix.set(cached, row, 4, low[offset])
+                matrix.set(cached, row, 5, close[offset])
+                matrix.set(cached, row, 6, volume[offset])
+                matrix.set(cached, row, 7, providerIndexSeries[offset])
+                matrix.set(cached, row, 8, sessionFirstSeries[offset] ? 1 : 0)
+                matrix.set(cached, row, 9, sessionLastSeries[offset] ? 1 : 0)
+        cachedOpen := time
+    [barstate.islast ? cached : na, barstate.islast ? count : 0]
+
+setRow(array<float> output, int first, matrix<float> data, int row, int count, int tag) =>
+    bool valid = not na(data) and row >= 0 and row < count
+    if valid
+        valid := priceSupported(matrix.get(data, row, 2)) and priceSupported(matrix.get(data, row, 3)) and priceSupported(matrix.get(data, row, 4)) and priceSupported(matrix.get(data, row, 5))
+    for column = 0 to 6
+        array.set(output, first + column, na)
+    if valid
+        array.set(output, first, encodeTime(int(matrix.get(data, row, 0)), tag))
+        // V3 close-time carrier holds provider index + session boundary bits.
+        // Close time is derived only after the fixed-width source check above.
+        int proof = int(matrix.get(data, row, 7)) * 4 + int(matrix.get(data, row, 8)) + int(matrix.get(data, row, 9)) * 2
+        array.set(output, first + 1, encodeScalar(proof, tag))
+        for column = 2 to 5
+            array.set(output, first + column, encodePrice(matrix.get(data, row, column), tag))
+        array.set(output, first + 6, encodeVolume(matrix.get(data, row, 6), tag))
+    valid
+
+hashStep(int hash, float value, int prime, int multiplier) =>
+    int integerValue = na(value) ? -1 : int(value)
+    int remainder = integerValue % prime
+    (hash * multiplier + (remainder < 0 ? remainder + prime : remainder)) % prime
+
+hashPayload(array<float> values, int epoch, int number, int prime, int multiplier) =>
+    int result = hashStep(0, epoch, prime, multiplier)
+    result := hashStep(result, number, prime, multiplier)
+    for index = 0 to 57
+        result := hashStep(result, array.get(values, index), prime, multiplier)
+    result
+
+// One bounded ASCII metadata record, BIG-ENDIAN4byte chunks with zero padding.
+// It is conveyed in-band, so neither startup nor recovery depends on Pine Logs.
+if not metadataBuilt
+    metadataSupported := str.length(compactMetadata) <= 84
+    for word = 0 to 20
+        int packedWord = 0
+        for byteIndex = 0 to 3
+            int offset = word * 4 + byteIndex
+            int characterCode = offset < str.length(compactMetadata) ? asciiCode(str.substring(compactMetadata, offset, offset + 1)) : 0
+            if na(characterCode)
+                metadataSupported := false
+                characterCode := 0
+            packedWord := packedWord * 256 + characterCode
+        array.set(metadataWords, word, packedWord)
+    metadataBuilt := true
+
+bool fixedBase = timeframe.isseconds or timeframe.isminutes
+float baseDuration = fixedBase ? timeframe.in_seconds() * 1000 : na
+float oneDuration = fixedDuration(higherOne)
+float twoDuration = fixedDuration(higherTwo)
+bool oneSupported = not na(oneDuration) and oneDuration > baseDuration
+bool twoSupported = not na(twoDuration) and twoDuration > baseDuration and higherTwo != higherOne
+
+[baseData, baseCount] = confirmedData(baseDuration)
+[oneData, oneCountRaw] = request.security(syminfo.tickerid, oneSupported ? higherOne : "1", confirmedData(oneDuration), lookahead = barmerge.lookahead_on, calc_bars_count = historyCount + 2)
+[twoData, twoCountRaw] = request.security(syminfo.tickerid, twoSupported ? higherTwo : "1", confirmedData(twoDuration), lookahead = barmerge.lookahead_on, calc_bars_count = historyCount + 2)
+int oneCount = oneSupported ? oneCountRaw : 0
+int twoCount = twoSupported ? twoCountRaw : 0
+
+q(string value) =>
+    '"' + str.replace_all(str.replace_all(value, "\\", "\\\\"), '"', '\\"') + '"'
+
+n(float value) =>
+    na(value) ? "null" : str.tostring(value, "#.################")
+
+b(bool value) =>
+    value ? "true" : "false"
+
+bootstrapRows(matrix<float> data, int count) =>
+    array<string> fragments = array.new<string>()
+    if not na(data) and count > 0
+        for row = 0 to count - 1
+            float traded = matrix.get(data, row, 6)
+            int volumeUnits = not na(traded) and traded >= 0 and traded < 1000000 ? int(math.round(traded * 1000000)) : volumeMissing
+            float publishedVolume = volumeUnits >= 0 and volumeUnits < volumeMissing ? volumeUnits / 1000000.0 : na
+            string item = '{"time":' + n(matrix.get(data, row, 0)) + ',"closeTime":' + n(matrix.get(data, row, 1)) + ',"open":' + n(matrix.get(data, row, 2)) + ',"high":' + n(matrix.get(data, row, 3)) + ',"low":' + n(matrix.get(data, row, 4)) + ',"close":' + n(matrix.get(data, row, 5)) + ',"volume":' + n(publishedVolume) + ',"closed":true,"sourceClosed":true,"providerBarIndex":' + n(matrix.get(data, row, 7)) + ',"sessionFirst":' + b(matrix.get(data, row, 8) == 1) + ',"sessionLast":' + b(matrix.get(data, row, 9) == 1) + '}'
+            array.push(fragments, item)
+    array.join(fragments, ",")
+
+bootstrapGaps(matrix<float> data, int count) =>
+    array<string> fragments = array.new<string>()
+    if not na(data) and count > 1
+        for row = 1 to count - 1
+            float before = matrix.get(data, row - 1, 1)
+            float after = matrix.get(data, row, 0)
+            if after > before and matrix.get(data, row - 1, 9) == 1 and matrix.get(data, row, 8) == 1 and matrix.get(data, row, 7) == matrix.get(data, row - 1, 7) + 1
+                array.push(fragments, '{"from":' + n(before) + ',"to":' + n(after) + ',"kind":"market_closed","basis":"PINE_SESSION_FLAGS_AND_PROVIDER_INDEX","previousBarIndex":' + n(matrix.get(data, row - 1, 7)) + ',"nextBarIndex":' + n(matrix.get(data, row, 7)) + ',"previousSessionLast":true,"nextSessionFirst":true}')
+    array.join(fragments, ",")
+
+bootstrapPacket(int number, string kind, float baseMs, string tf, float duration, int sourceAt, matrix<float> data, int count) =>
+    string gaps = bootstrapGaps(data, count)
+    string metadata = '{"source":"ohlc","instrument":' + q(ticker.standard(syminfo.tickerid)) + ',"timeframe":' + q(timeframe.period) + ',"timeframeMs":' + n(baseMs) + ',"tickSize":' + n(syminfo.mintick) + ',"pointValue":' + n(syminfo.pointvalue) + ',"currency":' + q(syminfo.currency) + ',"timezone":' + q(syminfo.timezone) + ',"session":' + q(syminfo.session) + ',"chartType":"standard"' + (number == 1 ? ',"sessionGaps":[' + gaps + ']' : "") + '}'
+    string rows = bootstrapRows(data, count)
+    string head = 'ARROW_OHLC_V1 {"schemaVersion":1,"kind":' + q(kind) + ',"runId":' + q(ticker.standard(syminfo.tickerid) + "|" + timeframe.period + "|" + str.tostring(runEpoch, "#")) + ',"sequence":' + n(number) + ',"sourceEmittedAt":' + n(sourceAt) + ',"realtime":false,"dataDelayUnverified":true,"bootstrapOnly":true,"metadata":' + metadata + ',"bars":[' + (number == 1 ? rows : "") + '],"reasonCodes":[]'
+    head + (number == 1 ? '}' : ',"higherTimeframes":[{"timeframe":' + q(tf) + ',"timeframeMs":' + n(duration) + ',"bars":[' + rows + '],"sessionGaps":[' + gaps + '],"reasonCodes":[' + (count == 0 ? q("HIGHER_TIMEFRAME_WARMUP") : "") + ']}]}')
+
+bool tickSupported = syminfo.mintick >= 0.0001 and math.abs(syminfo.mintick * 10000 - math.round(syminfo.mintick * 10000)) <= 0.000001
+bool previousVerified = bar_index > 0 and confirmedSeries[1] and not na(time_close[1]) and time_close[1] - time[1] == baseDuration
+bool currentPricesSupported = priceSupported(open) and priceSupported(high) and priceSupported(low) and priceSupported(close)
+bool previousPricesSupported = priceSupported(open[1]) and priceSupported(high[1]) and priceSupported(low[1]) and priceSupported(close[1])
+bool sourceSupported = metadataSupported and chart.is_standard and fixedBase and not na(time_close) and time_close - time == baseDuration and tickSupported and priceSupported(syminfo.pointvalue) and syminfo.pointvalue > 0 and previousVerified and currentPricesSupported and previousPricesSupported and oneSupported and twoSupported and bar_index >= 0 and bar_index * 4 + 3 < scalarBase
+
+// A single optional pre-session burst. Never log on a timer or each tick.
+// All three strings must fit before ANY is emitted; the latch is set first.
+// This bounds our own log payload, not TradingView's total heap allocation.
+if emitBootstrap and not bootstrapEmitted and barstate.islast and sourceSupported and baseCount > 0
+    bootstrapEmitted := true
+    int bootstrapSourceAt = timenow
+    string baseBootstrap = bootstrapPacket(1, "snapshot", baseDuration, timeframe.period, baseDuration, bootstrapSourceAt, baseData, baseCount)
+    string oneBootstrap = bootstrapPacket(2, "timeframe_snapshot", baseDuration, higherOne, oneDuration, bootstrapSourceAt, oneData, oneCount)
+    string twoBootstrap = bootstrapPacket(3, "timeframe_snapshot", baseDuration, higherTwo, twoDuration, bootstrapSourceAt, twoData, twoCount)
+    int totalBootstrapChars = str.length(baseBootstrap) + str.length(oneBootstrap) + str.length(twoBootstrap)
+    if str.length(baseBootstrap) <= 40960 and str.length(oneBootstrap) <= 40960 and str.length(twoBootstrap) <= 40960 and totalBootstrapChars <= 122880
+        log.info("{0}", baseBootstrap)
+        log.info("{0}", oneBootstrap)
+        log.info("{0}", twoBootstrap)
+
+// BEGIN_HISTORY_SCHEDULE
+historySchedule(int scanSlot, int recentSlot, int remaining, bool recentTurn) =>
+    int selected = 0
+    int nextScan = scanSlot
+    int nextRecent = recentSlot
+    int nextRemaining = remaining
+    bool nextTurn = recentTurn
+    if remaining > 0 and recentTurn
+        selected := recentSlot
+        nextRecent := recentSlot + 1
+        nextRemaining := remaining - 1
+        nextTurn := false
+    else
+        nextScan := (scanSlot + 1) % 100
+        selected := nextScan
+        nextTurn := true
+    [selected, nextScan, nextRecent, nextRemaining, nextTurn]
+// END_HISTORY_SCHEDULE
+
+// Full sequence advances on actual live executions, independently of log/UI
+// polling. Every observed>=200ms hold advances the bounded schedule once;
+// Phase0/11 carries metadata. A new base bar gives the eight newest confirmed
+// rows priority, interleaved with the separate full100-row scan. NEVER reset
+// the scan cursor or alternation turn at a bar boundary: even a sparse source
+// that advances bars on every execution must continue visiting older slots.
+if barstate.isrealtime
+    sourceSequence += 1
+    if na(recentHistoryBaseTime) or recentHistoryBaseTime != time
+        recentHistoryBaseTime := time
+        recentHistorySlot := 0
+        recentHistoryRemaining := math.min(8, baseCount)
+    if na(lastHistoryRotation)
+        lastHistoryRotation := timenow
+    else if timenow - lastHistoryRotation >= historyHoldMs
+        historyPhase := (historyPhase + 1) % 11
+        if historyPhase != 0
+            [selectedSlot, nextScanSlot, nextRecentSlot, nextRemaining, nextRecentTurn] = historySchedule(historyScanSlot, recentHistorySlot, recentHistoryRemaining, recentHistoryTurn)
+            historySlot := selectedSlot
+            historyScanSlot := nextScanSlot
+            recentHistorySlot := nextRecentSlot
+            recentHistoryRemaining := nextRemaining
+            recentHistoryTurn := nextRecentTurn
+        lastHistoryRotation := timenow
+int tag = sourceSequence % 4096
+bool publish = barstate.islast
+bool metadataFrame = historyPhase == 0
+int packedHistoryState = ((baseCount * 101 + oneCount) * 101 + twoCount) * 100 + historySlot + (metadataFrame ? 134217728 : 0)
+
+if publish
+    array.set(payload, 0, encodeTime(timenow, tag))
+    array.set(payload, 1, encodeScalar(not na(baseDuration) ? int(baseDuration) : 0, tag))
+    array.set(payload, 2, encodePrice(syminfo.mintick, tag))
+    array.set(payload, 3, encodePrice(syminfo.pointvalue, tag))
+    array.set(payload, 4, encodeScalar(not na(oneDuration) ? int(oneDuration) : 0, tag))
+    array.set(payload, 5, encodeScalar(not na(twoDuration) ? int(twoDuration) : 0, tag))
+    // SUPPORTED bit0=regular/representable,bit1=realtime,bit2=badmetadata.
+    array.set(payload, 6, encodeScalar((sourceSupported ? 1 : 0) + (barstate.isrealtime ? 2 : 0) + (metadataSupported ? 0 : 4), tag))
+    array.set(payload, 7, encodeScalar(packedHistoryState, tag))
+    array.set(payload, 8, encodeTime(time, tag))
+    array.set(payload, 9, encodeScalar(bar_index * 4 + (sessionFirstSeries ? 1 : 0) + (sessionLastSeries ? 2 : 0), tag))
+    array.set(payload, 10, encodePrice(open, tag))
+    array.set(payload, 11, encodePrice(high, tag))
+    array.set(payload, 12, encodePrice(low, tag))
+    array.set(payload, 13, encodePrice(close, tag))
+    array.set(payload, 14, encodeVolume(volume, tag))
+    array.set(payload, 15, encodeScalar(barstate.isconfirmed ? 1 : 0, tag))
+    setRow(payload, 16, baseData, previousVerified ? baseCount - 1 : -1, baseCount, tag)
+    setRow(payload, 23, oneData, oneCount - 1, oneCount, tag)
+    setRow(payload, 30, twoData, twoCount - 1, twoCount, tag)
+    setRow(payload, 37, baseData, baseCount - 1 - historySlot, baseCount, tag)
+    setRow(payload, 44, oneData, oneCount - 1 - historySlot, oneCount, tag)
+    setRow(payload, 51, twoData, twoCount - 1 - historySlot, twoCount, tag)
+    if metadataFrame
+        for word = 0 to 20
+            int field = word % 7
+            int carrierBase = field >= 2 and field <= 5 ? priceBase : scalarBase
+            array.set(payload, 37 + word, tag * carrierBase + array.get(metadataWords, word))
+
+varip int checksumA = 0
+varip int checksumB = 0
+if publish
+    checksumA := hashPayload(payload, runEpoch, sourceSequence, 1000000007, 65599)
+    checksumB := hashPayload(payload, runEpoch, sourceSequence, 1000000009, 131071)
+
+plot(publish ? 3 : na, "ARROW2_PROTOCOL", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? runEpoch : na, "ARROW2_RUN_EPOCH", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? sourceSequence : na, "ARROW2_SEQ_BEGIN", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 0) : na, "ARROW2_SOURCE_EPOCH", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 1) : na, "ARROW2_BASE_MS", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 2) : na, "ARROW2_TICK", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 3) : na, "ARROW2_POINT", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 4) : na, "ARROW2_HIGHER1_MS", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 5) : na, "ARROW2_HIGHER2_MS", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 6) : na, "ARROW2_SUPPORTED", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 7) : na, "ARROW2_HISTORY_STATE", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 8) : na, "ARROW2_CURRENT_TIME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 9) : na, "ARROW2_CURRENT_CLOSE_TIME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 10) : na, "ARROW2_CURRENT_OPEN", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 11) : na, "ARROW2_CURRENT_HIGH", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 12) : na, "ARROW2_CURRENT_LOW", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 13) : na, "ARROW2_CURRENT_CLOSE", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 14) : na, "ARROW2_CURRENT_VOLUME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 15) : na, "ARROW2_CURRENT_CLOSED", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 16) : na, "ARROW2_PREVIOUS_TIME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 17) : na, "ARROW2_PREVIOUS_CLOSE_TIME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 18) : na, "ARROW2_PREVIOUS_OPEN", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 19) : na, "ARROW2_PREVIOUS_HIGH", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 20) : na, "ARROW2_PREVIOUS_LOW", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 21) : na, "ARROW2_PREVIOUS_CLOSE", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 22) : na, "ARROW2_PREVIOUS_VOLUME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 23) : na, "ARROW2_HIGHER1_TIME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 24) : na, "ARROW2_HIGHER1_CLOSE_TIME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 25) : na, "ARROW2_HIGHER1_OPEN", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 26) : na, "ARROW2_HIGHER1_HIGH", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 27) : na, "ARROW2_HIGHER1_LOW", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 28) : na, "ARROW2_HIGHER1_CLOSE", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 29) : na, "ARROW2_HIGHER1_VOLUME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 30) : na, "ARROW2_HIGHER2_TIME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 31) : na, "ARROW2_HIGHER2_CLOSE_TIME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 32) : na, "ARROW2_HIGHER2_OPEN", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 33) : na, "ARROW2_HIGHER2_HIGH", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 34) : na, "ARROW2_HIGHER2_LOW", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 35) : na, "ARROW2_HIGHER2_CLOSE", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 36) : na, "ARROW2_HIGHER2_VOLUME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 37) : na, "ARROW2_HISTORY_BASE_TIME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 38) : na, "ARROW2_HISTORY_BASE_CLOSE_TIME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 39) : na, "ARROW2_HISTORY_BASE_OPEN", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 40) : na, "ARROW2_HISTORY_BASE_HIGH", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 41) : na, "ARROW2_HISTORY_BASE_LOW", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 42) : na, "ARROW2_HISTORY_BASE_CLOSE", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 43) : na, "ARROW2_HISTORY_BASE_VOLUME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 44) : na, "ARROW2_HISTORY_HIGHER1_TIME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 45) : na, "ARROW2_HISTORY_HIGHER1_CLOSE_TIME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 46) : na, "ARROW2_HISTORY_HIGHER1_OPEN", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 47) : na, "ARROW2_HISTORY_HIGHER1_HIGH", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 48) : na, "ARROW2_HISTORY_HIGHER1_LOW", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 49) : na, "ARROW2_HISTORY_HIGHER1_CLOSE", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 50) : na, "ARROW2_HISTORY_HIGHER1_VOLUME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 51) : na, "ARROW2_HISTORY_HIGHER2_TIME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 52) : na, "ARROW2_HISTORY_HIGHER2_CLOSE_TIME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 53) : na, "ARROW2_HISTORY_HIGHER2_OPEN", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 54) : na, "ARROW2_HISTORY_HIGHER2_HIGH", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 55) : na, "ARROW2_HISTORY_HIGHER2_LOW", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 56) : na, "ARROW2_HISTORY_HIGHER2_CLOSE", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? array.get(payload, 57) : na, "ARROW2_HISTORY_HIGHER2_VOLUME", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? checksumA : na, "ARROW2_CHECKSUM_A", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? checksumB : na, "ARROW2_CHECKSUM_B", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(publish ? sourceSequence : na, "ARROW2_SEQ_END", display = display.data_window, format = format.price, precision = 0, editable = false)
+

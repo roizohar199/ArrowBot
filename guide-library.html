@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'">
+  <title>Arrow · ספריית המדריך המלאה</title>
+  <link rel="stylesheet" href="guide-library.css">
+  <script src="guide-library.mjs" type="module"></script>
+</head>
+<body>
+  <a class="skip-link" href="#lesson">דילוג לתוכן הנושא</a>
+  <header class="page-header">
+    <div>
+      <p class="eyebrow" dir="ltr">ARROW · REFERENCE LIBRARY</p>
+      <h1>ספריית נרות ו־Price Action</h1>
+      <p>כל 47 נושאי המדריך · 6 מדורים · טקסט מקור מלא ותרגול</p>
+    </div>
+    <nav aria-label="כלים ראשיים" class="header-links">
+      <a href="live-ohlc.html">ללוח המעקב</a>
+      <a href="#about">מקור והגדרות</a>
+      <a href="#appendices">כל הנספחים</a>
+      <a href="Candlestick_Codex_Guide_HE.txt" download>הורדת המדריך המלא</a>
+    </nav>
+  </header>
+  <p class="notice">כיסוי של 47 נושאי לימוד אינו 47 אסטרטגיות אוטומטיות. הספים הם הגדרות למחקר; האיורים והמחירים סינתטיים. אין כאן פקודות מסחר, הוכחת רווחיות או אימות של כל תמונות הספר המקורי.</p>
+  <div class="library-layout">
+    <aside class="topic-sidebar" aria-label="חיפוש וניווט במדריך">
+      <form id="filters" role="search">
+        <label for="topic-search">חיפוש בנושא ובטקסט המלא</label>
+        <div class="search-row">
+          <input id="topic-search" name="q" type="search" placeholder="למשל: פיבונאצ׳י, 2.2, strict_gap" autocomplete="off" spellcheck="false" aria-controls="topic-list">
+          <button id="clear-search" type="button" aria-label="ניקוי החיפוש והמסננים">ניקוי</button>
+        </div>
+        <label for="section-filter">מדור</label>
+        <select id="section-filter" name="section" aria-controls="topic-list"><option value="">כל 6 המדורים</option></select>
+        <label for="coverage-filter">אופי הכיסוי</label>
+        <select id="coverage-filter" name="coverage" aria-controls="topic-list"><option value="">כל סוגי הכיסוי</option></select>
+      </form>
+      <p id="topic-count" class="muted" role="status" aria-live="polite"></p>
+      <nav id="topic-list" aria-label="נושאי המדריך"></nav>
+      <p class="keyboard-tip">מקש <kbd>/</kbd> לחיפוש · ניווט באמצעות Tab ו־Enter · Escape לניקוי החיפוש</p>
+    </aside>
+    <main id="lesson" tabindex="-1" aria-labelledby="lesson-title">
+      <noscript>כדי לפתוח את הספרייה נדרש JavaScript מקומי. אפשר להוריד את קובץ המדריך המלא דרך הקישור בראש הדף.</noscript>
+      <p id="loading">טוען את המדריך המקומי…</p>
+    </main>
+  </div>
+  <footer>התוכן נטען מקבצי ההרחבה בלבד. אין בדף זה חיבור לרשת או לחשבון מסחר.</footer>
+</body>
+</html>

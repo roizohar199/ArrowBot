@@ -1,0 +1,506 @@
+//@version=6
+// Arrow native approved-marker companion. Independent from the OHLC bridge.
+// This indicator draws supplied approvals; it never creates orders or signals.
+indicator("Arrow Approved Candle Markers", overlay = true, max_labels_count = 200, max_lines_count = 100, calc_bars_count = 5000, dynamic_requests = true, format = format.price, precision = 0)
+
+string markerPayload = input.text_area("", "Approved marker payload", tooltip = "Arrow LIVE: colored arrow = verified native fill (LONG below the candle, SHORT above); gray circle = research only. Exact fill price/time are in the top-right table and tooltip, at one-second precision. Empty or invalid input draws nothing.")
+bool expandFillList = input.bool(false, "הרחבת רשימת העסקאות (20 אחרונות)", group = "רשימת עסקאות", tooltip = "כבוי: שורה אחת עם העסקה האחרונה. פעיל: עד 20 עסקאות אחרונות, מהחדשה לישנה. לשינוי פתחו את הגדרות האינדיקטור > Inputs > רשימת עסקאות.", display = display.none)
+string ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_!:.|-/\n"
+int MAX_MARKERS = 100
+int MAX_FILL_DETAILS = 20
+int fillTableRows = expandFillList ? MAX_FILL_DETAILS + 1 : 1
+
+type CandleMarker
+    string markerId
+    int openTime
+    int closeTime
+    int openTicks
+    int highTicks
+    int lowTicks
+    int closeTicks
+    int direction
+    int priceTicks
+    int riskMicros
+    bool matched
+    bool liveApproved
+    int fillTime
+    int fillPriceTicks
+    int fillUtcOffsetMinutes
+    float fillCandleHigh
+    float fillCandleLow
+    int fillCandleTime
+
+readInteger(array<string> values, int index) =>
+    float value = str.tonumber(array.get(values, index))
+    not na(value) and value == math.floor(value) and math.abs(value) <= 8640000000000000 ? int(value) : na
+
+payloadHash(string payloadText) =>
+    int result = 17
+    bool valid = str.length(payloadText) <= 32768
+    if valid and str.length(payloadText) > 0
+        for i = 0 to str.length(payloadText) - 1
+            string character = str.substring(payloadText, i, i + 1)
+            int characterPosition = str.pos(ALPHABET, character)
+            if na(characterPosition) or characterPosition < 0
+                valid := false
+            else
+                result := (result * 31 + characterPosition + 1) % 1000000007
+    [result, valid]
+
+var array<CandleMarker> markers = array.new<CandleMarker>()
+var array<label> drawings = array.new<label>()
+var array<line> longFillArrows = array.new<line>()
+var bool payloadValid = false
+var string expectedInstrument = ""
+var string expectedTimeframe = ""
+var string sourceMode = ""
+var int approvalCutoff = 0
+var int signature = 17
+var int modeCode = 0
+var bool technicalPayload = false
+var bool directionPayload = false
+var bool entryPayload = false
+var bool fillPayload = false
+var int payloadSchemaCode = 1
+
+if barstate.isfirst
+    [calculatedSignature, characterValid] = payloadHash(markerPayload)
+    signature := calculatedSignature
+    array<string> lines = str.split(markerPayload, "\n")
+    if characterValid and str.length(markerPayload) > 0 and array.size(lines) >= 1 and array.size(lines) <= MAX_MARKERS + 1
+        array<string> header = str.split(array.get(lines, 0), "|")
+        if array.size(header) == 5
+            expectedInstrument := array.get(header, 1)
+            expectedTimeframe := array.get(header, 2)
+            sourceMode := array.get(header, 3)
+            string schemaName = array.get(header, 0)
+            fillPayload := schemaName == "ARROW_FILL_MARKERS_V1"
+            entryPayload := schemaName == "ARROW_ENTRY_MARKERS_V1" or fillPayload
+            directionPayload := schemaName == "ARROW_DIRECTION_MARKERS_V1" or entryPayload
+            technicalPayload := schemaName == "ARROW_TECHNICAL_MARKERS_V1" or directionPayload
+            payloadSchemaCode := fillPayload ? 5 : entryPayload ? 4 : directionPayload ? 3 : technicalPayload ? 2 : 1
+            int parsedCutoff = readInteger(header, 4)
+            bool schemaValid = schemaName == "ARROW_CANDLE_MARKERS_V1" or technicalPayload
+            payloadValid := schemaValid and str.startswith(expectedInstrument, "CME_MINI:NQ") and expectedTimeframe == "1" and (sourceMode == "LIVE" or sourceMode == "REPLAY") and (not technicalPayload or sourceMode == "REPLAY" or directionPayload and sourceMode == "LIVE") and not na(parsedCutoff) and parsedCutoff >= 0
+            approvalCutoff := na(parsedCutoff) ? 0 : parsedCutoff
+            modeCode := sourceMode == "LIVE" ? 1 : sourceMode == "REPLAY" ? 2 : 0
+            array<string> markerIds = array.new<string>()
+            if payloadValid and array.size(lines) > 1
+                for row = 1 to array.size(lines) - 1
+                    array<string> values = str.split(array.get(lines, row), "|")
+                    if array.size(values) != (fillPayload ? 13 : technicalPayload and not directionPayload ? 9 : 10)
+                        payloadValid := false
+                    else
+                        string markerId = array.get(values, 0)
+                        int openTime = readInteger(values, 1)
+                        int closeTime = readInteger(values, 2)
+                        int openTicks = readInteger(values, 3)
+                        int highTicks = readInteger(values, 4)
+                        int lowTicks = readInteger(values, 5)
+                        int closeTicks = readInteger(values, 6)
+                        int direction = readInteger(values, 7)
+                        int priceTicks = readInteger(values, 8)
+                        // Technical schema has no risk field. Zero is only an
+                        // unused internal slot, never a supplied risk amount.
+                        int riskMicros = technicalPayload ? 0 : readInteger(values, 9)
+                        int liveFlag = directionPayload ? readInteger(values, 9) : 0
+                        int fillTime = fillPayload ? readInteger(values, 10) : 0
+                        int fillPriceTicks = fillPayload ? readInteger(values, 11) : 0
+                        int fillUtcOffsetMinutes = fillPayload ? readInteger(values, 12) : 0
+                        bool numbersValid = not na(openTime) and not na(closeTime) and not na(openTicks) and not na(highTicks) and not na(lowTicks) and not na(closeTicks) and not na(direction) and not na(priceTicks) and not na(riskMicros)
+                        bool rowValid = numbersValid and str.length(markerId) > 0 and str.length(markerId) <= 64 and array.indexof(markerIds, markerId) == -1 and openTime >= 0 and closeTime - openTime == 60000 and closeTime <= approvalCutoff and openTicks > 0 and lowTicks > 0 and highTicks >= math.max(openTicks, closeTicks, lowTicks) and lowTicks <= math.min(openTicks, closeTicks, highTicks) and priceTicks == closeTicks and (direction == 1 or direction == -1) and (technicalPayload or riskMicros > 0 and riskMicros <= 200000000)
+                        rowValid := rowValid and (not directionPayload or not na(liveFlag) and (liveFlag == 0 or liveFlag == 1))
+                        rowValid := rowValid and (not fillPayload or not na(fillTime) and not na(fillPriceTicks) and not na(fillUtcOffsetMinutes) and math.abs(fillUtcOffsetMinutes) <= 840 and (liveFlag == 1 ? fillTime >= closeTime - 5000 and fillTime <= timenow + 5000 and fillPriceTicks > 0 : fillTime == 0 and fillPriceTicks == 0 and fillUtcOffsetMinutes == 0))
+                        if rowValid
+                            array.push(markerIds, markerId)
+                            array.push(markers, CandleMarker.new(markerId, openTime, closeTime, openTicks, highTicks, lowTicks, closeTicks, direction, priceTicks, riskMicros, false, liveFlag == 1, fillTime, fillPriceTicks, fillUtcOffsetMinutes, na, na, 0))
+                        else
+                            payloadValid := false
+
+// Match the same standard ticker identity used by the OHLC source bridge;
+// TradingView can decorate the raw tickerid with session/adjustment modifiers.
+bool symbolIdentity = ticker.standard(syminfo.tickerid) == expectedInstrument
+bool timeframeIdentity = timeframe.period == expectedTimeframe
+bool specificationIdentity = syminfo.mintick == 0.25 and syminfo.pointvalue == 20 and syminfo.currency == "USD"
+bool sourceIdentity = symbolIdentity and timeframeIdentity and specificationIdentity and chart.is_standard
+bool cutoffIdentity = approvalCutoff <= (barstate.isconfirmed ? time_close : time)
+if payloadValid and sourceIdentity and array.size(markers) > 0
+    for marker in markers
+        if barstate.isconfirmed and time == marker.openTime and time_close == marker.closeTime
+            marker.matched := math.round(open / syminfo.mintick) == marker.openTicks and math.round(high / syminfo.mintick) == marker.highTicks and math.round(low / syminfo.mintick) == marker.lowTicks and math.round(close / syminfo.mintick) == marker.closeTicks
+        if fillPayload and marker.liveApproved and time <= marker.fillTime and marker.fillTime < time_close
+            marker.fillCandleHigh := high
+            marker.fillCandleLow := low
+            marker.fillCandleTime := time
+
+var int nativeMatched = 0
+var int nativeDrawn = 0
+var int nativeContext = 0
+var int nativeLastTime = 0
+var int nativeLastPriceTicks = 0
+var int nativeLastDirection = 0
+var int nativeEntryCount = 0
+var int nativeResearchCount = 0
+var table modeBanner = table.new(position.top_center, 1, 2)
+var table fillDetails = table.new(position.top_right, 3, fillTableRows, border_width = 1)
+
+if barstate.islast
+    if array.size(drawings) > 0
+        for drawing in drawings
+            label.delete(drawing)
+    array.clear(drawings)
+    if array.size(longFillArrows) > 0
+        for arrow in longFillArrows
+            line.delete(arrow)
+    array.clear(longFillArrows)
+    table.clear(fillDetails, 0, 0, 2, fillTableRows - 1)
+    nativeMatched := 0
+    nativeLastTime := 0
+    nativeLastPriceTicks := 0
+    nativeLastDirection := 0
+    nativeEntryCount := 0
+    nativeResearchCount := 0
+    // Moving Replay backwards below the analysis cutoff clears every marker.
+    int chartClosedCutoff = barstate.isconfirmed ? time_close : time
+    bool contextValid = payloadValid and sourceIdentity and cutoffIdentity
+    bool fillCandlesKnown = true
+    if array.size(markers) > 0
+        for marker in markers
+            if fillPayload and marker.liveApproved and (na(marker.fillCandleHigh) or na(marker.fillCandleLow))
+                fillCandlesKnown := false
+            if marker.matched and marker.closeTime <= chartClosedCutoff
+                nativeMatched += 1
+    // All-or-none: missing history or any changed OHLC leaves no partial claim.
+    bool canDraw = contextValid and nativeMatched == array.size(markers) and fillCandlesKnown
+    nativeContext := contextValid ? 1 : 0
+    if canDraw and array.size(markers) > 0
+        for marker in markers
+            bool submittedEntry = entryPayload and marker.liveApproved
+            color arrowColor = entryPayload and not submittedEntry ? color.rgb(148, 163, 184) : marker.direction == 1 ? color.rgb(125, 211, 252) : color.rgb(251, 146, 60)
+            string arrowStyle = fillPayload and submittedEntry ? label.style_none : submittedEntry ? marker.direction == 1 ? label.style_arrowup : label.style_arrowdown : label.style_none
+            string arrowText = fillPayload and submittedEntry ? marker.direction == 1 ? "⬆" : "⬇" : entryPayload ? submittedEntry ? "" : "○" : marker.direction == 1 ? "⬆︎" : "⬇︎"
+            string arrowYloc = entryPayload ? yloc.price : marker.direction == 1 ? yloc.belowbar : yloc.abovebar
+            string approvalDescription = technicalPayload ? "technical direction | user-managed risk | NOT A FILL" : "approved closed candle | planned risk $" + str.tostring(marker.riskMicros / 1000000.0, "#.00") + " | NOT A FILL"
+            if directionPayload
+                approvalDescription := marker.liveApproved ? "LIVE APPROVAL | user-managed risk | NOT A FILL" : "HISTORICAL CONFIRMED SCENARIO | recomputed | NOT AN EXECUTED OR MISSED FILL"
+            if entryPayload
+                approvalDescription := submittedEntry ? "BUY/SELL MARKET DISPATCHED | confirmation price, NOT fill price | user-managed SL/TP" : "RESEARCH ONLY | no native entry dispatch receipt"
+            if fillPayload
+                approvalDescription := submittedEntry ? "VERIFIED NATIVE FILL | actual account fill price/time | timestamp precision 1 second | user-managed SL/TP" : "RESEARCH ONLY | no verified native fill time and price"
+            string description = "Arrow " + sourceMode + " | " + (marker.direction == 1 ? "LONG" : "SHORT") + "\n" + marker.markerId + " | " + approvalDescription
+            description += "\nConfirmation UTC: " + str.format_time(marker.closeTime, "yyyy-MM-dd HH:mm:ss", "Etc/UTC") + " | price: " + str.tostring(marker.priceTicks * syminfo.mintick, format.mintick)
+            // Verified fill arrows align to the actual minute of the fill: LONG below the fill
+            // candle low, SHORT above its high, leaving body/wicks clear. The table and
+            // tooltip retain the exact fill price; placement is display only.
+            int drawingTime = fillPayload and submittedEntry ? marker.fillCandleTime : entryPayload ? marker.closeTime : marker.openTime
+            int drawingPriceTicks = fillPayload and submittedEntry ? marker.fillPriceTicks : marker.priceTicks
+            string fillClock = fillPayload and submittedEntry ? str.format_time(marker.fillTime + marker.fillUtcOffsetMinutes * 60000, "HH:mm:ss", "Etc/UTC") : ""
+            if fillPayload and submittedEntry
+                description := "Arrow VERIFIED FILL | " + (marker.direction == 1 ? "LONG" : "SHORT") + "\nFILL " + str.tostring(drawingPriceTicks * syminfo.mintick, format.mintick) + " | native history: " + fillClock + " | timestamp precision 1 second"
+            // Explicit price placement avoids TradingView abovebar stacking.
+            // LONG uses a native upward arrow whose tip is below the candle low;
+            // SHORT keeps its text arrow above the candle high. Both use a
+            // clearance outside the wick and follow the developing fill candle.
+            float arrowDisplayPrice = fillPayload and submittedEntry ? marker.direction == 1 ? marker.fillCandleLow - 20 * syminfo.mintick : marker.fillCandleHigh + 12 * syminfo.mintick : drawingPriceTicks * syminfo.mintick
+            if fillPayload and submittedEntry and marker.direction == 1
+                // An endpoint arrow puts its tip exactly at the lower clearance;
+                // unlike label arrows, its shaft cannot extend into the candle.
+                float shaftLength = math.max(12 * syminfo.mintick, math.min(48 * syminfo.mintick, (marker.fillCandleHigh - marker.fillCandleLow) * 0.4))
+                line longArrow = line.new(drawingTime, arrowDisplayPrice - shaftLength, drawingTime, arrowDisplayPrice, xloc = xloc.bar_time, color = arrowColor, style = line.style_arrow_right, width = 6)
+                array.push(longFillArrows, longArrow)
+                label longHead = label.new(drawingTime, arrowDisplayPrice, "", xloc = xloc.bar_time, yloc = yloc.price, style = label.style_triangleup, color = arrowColor, textcolor = arrowColor, size = size.normal, tooltip = description)
+                array.push(drawings, longHead)
+            else
+                label drawing = label.new(drawingTime, arrowDisplayPrice, arrowText, xloc = xloc.bar_time, yloc = arrowYloc, style = arrowStyle, color = fillPayload and submittedEntry ? color.new(arrowColor, 100) : arrowColor, textcolor = arrowColor, size = fillPayload and submittedEntry ? size.huge : entryPayload and not submittedEntry ? size.small : size.huge, tooltip = description)
+                if fillPayload and submittedEntry
+                    label.set_size(drawing, 48)
+                    label.set_text_formatting(drawing, text.format_bold)
+                array.push(drawings, drawing)
+            if submittedEntry and not fillPayload
+                // Legacy dispatch payloads retain their confirmation annotation.
+                label priceLabel = label.new(drawingTime, drawingPriceTicks * syminfo.mintick, str.tostring(drawingPriceTicks * syminfo.mintick, format.mintick), xloc = xloc.bar_time, yloc = yloc.price, style = label.style_label_left, color = color.new(arrowColor, 80), textcolor = arrowColor, size = size.small, tooltip = description)
+                array.push(drawings, priceLabel)
+            nativeEntryCount += submittedEntry ? 1 : 0
+            nativeResearchCount += entryPayload and not submittedEntry ? 1 : 0
+            nativeLastTime := fillPayload and submittedEntry ? marker.fillTime : marker.openTime
+            nativeLastPriceTicks := drawingPriceTicks
+            nativeLastDirection := marker.direction
+    // Display preference only: collapsed is exactly one latest-fill row;
+    // expanded is a header plus the latest 20 verified fills by native fill time.
+    // Pine tables have no click events; the checkbox lives in Settings > Inputs.
+    if fillPayload and canDraw and nativeEntryCount > 0
+        color tableBackground = color.rgb(15, 23, 42)
+        string listTooltip = "הגדרות האינדיקטור > Inputs > רשימת עסקאות > הרחבת רשימת העסקאות (20 אחרונות)"
+        if expandFillList
+            table.cell(fillDetails, 0, 0, "FILL TIME", text_color = color.white, bgcolor = tableBackground, text_size = size.small, tooltip = listTooltip)
+            table.cell(fillDetails, 1, 0, "SIDE", text_color = color.white, bgcolor = tableBackground, text_size = size.small, tooltip = listTooltip)
+            table.cell(fillDetails, 2, 0, "FILL PRICE", text_color = color.white, bgcolor = tableBackground, text_size = size.small, tooltip = listTooltip)
+        array<int> fillIndices = array.new<int>()
+        array<int> fillTimes = array.new<int>()
+        for i = 0 to array.size(markers) - 1
+            CandleMarker marker = array.get(markers, i)
+            if marker.liveApproved
+                array.push(fillIndices, i)
+                array.push(fillTimes, marker.fillTime)
+        array<int> newestFills = array.sort_indices(fillTimes, order.descending)
+        int visibleFills = math.min(array.size(newestFills), expandFillList ? MAX_FILL_DETAILS : 1)
+        for rank = 0 to visibleFills - 1
+            CandleMarker marker = array.get(markers, array.get(fillIndices, array.get(newestFills, rank)))
+            int detailRow = rank + (expandFillList ? 1 : 0)
+            color detailColor = marker.direction == 1 ? color.rgb(125, 211, 252) : color.rgb(251, 146, 60)
+            string nativeClock = str.format_time(marker.fillTime + marker.fillUtcOffsetMinutes * 60000, "dd/MM HH:mm:ss", "Etc/UTC")
+            table.cell(fillDetails, 0, detailRow, nativeClock, text_color = detailColor, bgcolor = tableBackground, text_size = size.small, tooltip = listTooltip)
+            table.cell(fillDetails, 1, detailRow, marker.direction == 1 ? "LONG" : "SHORT", text_color = detailColor, bgcolor = tableBackground, text_size = size.small, tooltip = listTooltip)
+            table.cell(fillDetails, 2, detailRow, str.tostring(marker.fillPriceTicks * syminfo.mintick, format.mintick), text_color = detailColor, bgcolor = tableBackground, text_size = size.small, tooltip = listTooltip)
+    // Native proof counts marker records, each with one primary symbol and an
+    // optional price annotation; it does not count annotation labels twice.
+    nativeDrawn := canDraw ? array.size(markers) : 0
+    string heading = contextValid ? "ARROW · " + sourceMode + (fillPayload ? " · VERIFIED FILLS" : entryPayload ? " · MARKET ENTRIES" : technicalPayload ? " · TECHNICAL DIRECTION" : " · APPROVED CANDLES") : "ARROW MARKERS · BLOCKED"
+    string detail = canDraw ? nativeDrawn == 0 ? technicalPayload ? "No confirmed technical directions · NOT FILLS" : "No strict approved markers · NOT FILLS" : str.tostring(nativeDrawn) + " native arrows · NOT FILLS" : "No arrows: source / cutoff / candle verification"
+    if entryPayload and canDraw
+        detail := str.tostring(nativeEntryCount) + " market entry arrows · " + str.tostring(nativeResearchCount) + " research circles · NOT FILL PRICES"
+    if fillPayload and canDraw
+        detail := str.tostring(nativeEntryCount) + " verified fill arrows · " + str.tostring(nativeResearchCount) + " research circles"
+    table.cell(modeBanner, 0, 0, heading, text_color = color.white, bgcolor = color.rgb(23, 30, 41), text_size = size.small)
+    table.cell(modeBanner, 0, 1, detail, text_color = color.silver, bgcolor = color.rgb(23, 30, 41), text_size = size.small)
+
+
+plot(payloadSchemaCode, "ARROW_MARKER_SCHEMA", display = display.data_window)
+plot(signature, "ARROW_MARKER_SIGNATURE", display = display.data_window)
+plot(array.size(markers), "ARROW_MARKER_EXPECTED_COUNT", display = display.data_window)
+plot(nativeMatched, "ARROW_MARKER_MATCHED_COUNT", display = display.data_window)
+plot(nativeDrawn, "ARROW_MARKER_DRAWN_COUNT", display = display.data_window)
+plot(modeCode, "ARROW_MARKER_MODE", display = display.data_window)
+plot(nativeLastTime, "ARROW_MARKER_LAST_TIME", display = display.data_window)
+plot(nativeLastPriceTicks, "ARROW_MARKER_LAST_PRICE_TICKS", display = display.data_window)
+plot(nativeLastDirection, "ARROW_MARKER_LAST_DIRECTION", display = display.data_window)
+plot(approvalCutoff, "ARROW_MARKER_CUTOFF", display = display.data_window)
+plot(nativeContext, "ARROW_MARKER_CONTEXT_VALID", display = display.data_window)
+// Optional diagnostic plots; not part of the required eleven-field receipt.
+plot(payloadValid ? 1 : 0, "ARROW_MARKER_DEBUG_PAYLOAD_VALID", display = display.data_window)
+plot(symbolIdentity ? 1 : 0, "ARROW_MARKER_DEBUG_SYMBOL_MATCH", display = display.data_window)
+plot(timeframeIdentity ? 1 : 0, "ARROW_MARKER_DEBUG_TIMEFRAME_MATCH", display = display.data_window)
+plot(specificationIdentity ? 1 : 0, "ARROW_MARKER_DEBUG_SPECIFICATION_MATCH", display = display.data_window)
+plot(chart.is_standard ? 1 : 0, "ARROW_MARKER_DEBUG_STANDARD_CHART", display = display.data_window)
+plot(cutoffIdentity ? 1 : 0, "ARROW_MARKER_DEBUG_CUTOFF_MATCH", display = display.data_window)
+
+// Separate historical transport. It never alters the live OHLC bridge, signal
+// rules, account controls or orders. Eleven exact price/proof rows per public
+// frame; the old five-row protocol remains a lossless fallback. Volume is not
+// part of this price-action backfill; the independent live source retains it.
+string archiveRepairText = input.text_area("", "History archive repair request", tooltip = "Arrow requests only missing closed historical OHLC. No orders, account settings or risk values.")
+var array<int> archiveRepairTimes = array.new<int>()
+var array<int> archiveRepairFrames = array.new<int>()
+var int archiveRepairAt = na
+if barstate.isfirst and str.length(archiveRepairText) <= 1024
+    array<string> repairLines = str.split(archiveRepairText, "\n")
+    if array.size(repairLines) >= 2 and array.size(repairLines) <= 9
+        array<string> repairHeader = str.split(array.get(repairLines, 0), "|")
+        bool validRepair = array.size(repairHeader) == 2
+        if validRepair
+            float requestedAt = str.tonumber(array.get(repairHeader, 1))
+            validRepair := array.get(repairHeader, 0) == "ARROW_ARCHIVE_REPAIR_V1" and not na(requestedAt) and requestedAt >= 1577836800000 and requestedAt == math.floor(requestedAt)
+            if validRepair
+                archiveRepairAt := int(requestedAt)
+        if validRepair
+            for line = 1 to array.size(repairLines) - 1
+                array<string> request = str.split(array.get(repairLines, line), "|")
+                if array.size(request) != 2
+                    validRepair := false
+                else
+                    float tf = str.tonumber(array.get(request, 0))
+                    float at = str.tonumber(array.get(request, 1))
+                    bool validLine = not na(tf) and (tf == 1 or tf == 5 or tf == 15) and not na(at) and at >= 1577836800000 and at <= archiveRepairAt and at % 60000 == 0
+                    validRepair := validRepair and validLine
+                    if validLine
+                        array.push(archiveRepairFrames, int(tf))
+                        array.push(archiveRepairTimes, int(at))
+        if not validRepair
+            archiveRepairAt := na
+            array.clear(archiveRepairFrames)
+            array.clear(archiveRepairTimes)
+max_bars_back(time, 5000)
+max_bars_back(time_close, 5000)
+max_bars_back(open, 5000)
+max_bars_back(high, 5000)
+max_bars_back(low, 5000)
+max_bars_back(close, 5000)
+max_bars_back(volume, 5000)
+bool archiveSessionFirst = session.isfirstbar
+bool archiveSessionLast = session.islastbar
+max_bars_back(archiveSessionFirst, 5000)
+max_bars_back(archiveSessionLast, 5000)
+int archiveIndexSeries = bar_index
+max_bars_back(archiveIndexSeries, 5000)
+archiveMatrix(int duration, int warmup, int minimumRows) =>
+    max_bars_back(time, 5000)
+    max_bars_back(time_close, 5000)
+    max_bars_back(open, 5000)
+    max_bars_back(high, 5000)
+    max_bars_back(low, 5000)
+    max_bars_back(close, 5000)
+    max_bars_back(volume, 5000)
+    max_bars_back(archiveIndexSeries, 5000)
+    max_bars_back(archiveSessionFirst, 5000)
+    max_bars_back(archiveSessionLast, 5000)
+    varip matrix<float> data = matrix.new<float>(0, 7, na)
+    varip int built = na
+    if barstate.islast and (na(built) or timenow - built >= 300000)
+        data := matrix.new<float>(0, 7, na)
+        int older = 0
+        int limit = math.min(4999, bar_index)
+        int boundary = time - 86400000
+        if limit > 0
+            for offset = 1 to limit
+                if time_close[offset] - time[offset] != duration or na(close[offset])
+                    break
+                bool old = time_close[offset] <= boundary
+                if old and older >= warmup and matrix.rows(data) >= minimumRows
+                    break
+                if old
+                    older += 1
+                float vol = not na(volume[offset]) and volume[offset] >= 0 and volume[offset] < 1000000 ? math.round(volume[offset] * 1000000) : -1
+                array<float> row = array.from(float(time[offset]), math.round(open[offset] / syminfo.mintick), math.round(high[offset] / syminfo.mintick), math.round(low[offset] / syminfo.mintick), math.round(close[offset] / syminfo.mintick), vol, float(archiveIndexSeries[offset] * 4 + (archiveSessionFirst[offset] ? 1 : 0) + (archiveSessionLast[offset] ? 2 : 0)))
+                matrix.add_row(data, matrix.rows(data), row)
+        built := timenow
+    data
+matrix<float> archiveBase = archiveMatrix(60000, 600, 3600)
+matrix<float> archiveFive = request.security(syminfo.tickerid, "5", archiveMatrix(300000, 100, 900), lookahead = barmerge.lookahead_on, calc_bars_count = 5000)
+matrix<float> archiveFifteen = request.security(syminfo.tickerid, "15", archiveMatrix(900000, 100, 400), lookahead = barmerge.lookahead_on, calc_bars_count = 5000)
+varip int archiveRun = timenow
+varip int archiveSeq = 0
+varip int archiveLastAt = na
+varip array<float> archiveFrame = array.new<float>(47, -1)
+varip int archiveHashA = 0
+varip int archiveHashB = 0
+[archiveMeta, archiveMetaValid] = payloadHash(ticker.standard(syminfo.tickerid) + "|" + timeframe.period + "|" + str.tostring(syminfo.mintick, "0.####") + "|" + str.tostring(syminfo.pointvalue, "0.####") + "|" + syminfo.currency)
+bool archiveSupported = chart.is_standard and timeframe.period == "1" and syminfo.mintick == 0.25 and syminfo.pointvalue == 20 and syminfo.currency == "USD" and archiveMetaValid
+if barstate.islast and archiveSupported and (na(archiveLastAt) or timenow - archiveLastAt >= 100)
+    archiveSeq += 1
+    // Wall-clock paging survives marker-payload updates and script restarts.
+    // A page stays available for a whole second, rather than disappearing on
+    // the next price tick. Base pages receive three of every five slots.
+    int archiveSlot = int(math.floor(timenow / 1000))
+    int archiveSlotKind = archiveSlot % 5
+    int archiveSeries = archiveSlotKind == 0 ? 1 : archiveSlotKind == 1 ? 2 : 0
+    int archiveCycle = int(math.floor(archiveSlot / 5))
+    int repairRequestIndex = not na(archiveRepairAt) and timenow - archiveRepairAt >= -5000 and timenow - archiveRepairAt < 60000 and array.size(archiveRepairTimes) > 0 ? int(math.floor(math.max(0, timenow - archiveRepairAt) / 2500)) % array.size(archiveRepairTimes) : -1
+    if repairRequestIndex >= 0
+        int repairTf = array.get(archiveRepairFrames, repairRequestIndex)
+        archiveSeries := repairTf == 1 ? 0 : repairTf == 5 ? 1 : 2
+    int archivePageCursor = archiveSeries == 0 ? archiveCycle * 3 + math.max(0, archiveSlotKind - 2) : archiveCycle
+    matrix<float> selectedArchive = archiveSeries == 0 ? archiveBase : archiveSeries == 1 ? archiveFive : archiveFifteen
+    int archiveDuration = archiveSeries == 0 ? 60000 : archiveSeries == 1 ? 300000 : 900000
+    int totalRows = not na(selectedArchive) ? matrix.rows(selectedArchive) : 0
+    int repairRow = -1
+    if repairRequestIndex >= 0 and totalRows > 0
+        int requestedTime = array.get(archiveRepairTimes, repairRequestIndex)
+        int left = 0
+        int right = totalRows - 1
+        while left <= right
+            int middle = int(math.floor((left + right) / 2))
+            int foundTime = int(matrix.get(selectedArchive, middle, 0))
+            if foundTime == requestedTime
+                repairRow := middle
+                break
+            if foundTime > requestedTime
+                left := middle + 1
+            else
+                right := middle - 1
+    bool compact = true
+    int rowsPerFrame = 11
+    int pageCount = math.max(1, int(math.ceil(totalRows / 11.0)))
+    int page = archivePageCursor % pageCount
+    int rowStart = repairRow >= 0 ? repairRow : page * 11
+    for rowOffset = 0 to 10
+        int row = rowStart + rowOffset
+        if row < totalRows
+            float minuteTime = matrix.get(selectedArchive, row, 0) / 60000
+            float proof = matrix.get(selectedArchive, row, 6)
+            compact := compact and minuteTime >= 0 and minuteTime < 67108864 and minuteTime == math.floor(minuteTime) and proof >= 0 and proof < 134217728
+            for column = 1 to 4
+                float priceTicks = matrix.get(selectedArchive, row, column)
+                compact := compact and priceTicks > 0 and priceTicks < 67108864 and priceTicks == math.floor(priceTicks)
+    if not compact
+        rowsPerFrame := 5
+        pageCount := math.max(1, int(math.ceil(totalRows / 5.0)))
+        page := archivePageCursor % pageCount
+        repairRow := -1
+    array.set(archiveFrame, 0, compact ? repairRow >= 0 ? 3 : 2 : 1)
+    array.set(archiveFrame, 1, archiveRun)
+    array.set(archiveFrame, 2, archiveSeq)
+    array.set(archiveFrame, 3, timenow)
+    array.set(archiveFrame, 4, totalRows > 0 ? matrix.get(selectedArchive, 0, 0) + archiveDuration : time)
+    array.set(archiveFrame, 5, archiveDuration)
+    array.set(archiveFrame, 6, totalRows)
+    array.set(archiveFrame, 7, repairRow >= 0 ? repairRow : page)
+    array.set(archiveFrame, 8, archiveMeta)
+    for index = 0 to 34
+        float value = -1
+        if compact
+            int row = rowStart + int(math.floor(index / 3))
+            int column = index % 3
+            if index < 33 and row < totalRows
+                value := column == 0 ? matrix.get(selectedArchive, row, 0) / 60000 * 134217728 + matrix.get(selectedArchive, row, 6) : column == 1 ? matrix.get(selectedArchive, row, 1) * 67108864 + matrix.get(selectedArchive, row, 2) : matrix.get(selectedArchive, row, 3) * 67108864 + matrix.get(selectedArchive, row, 4)
+        else
+            int row = page * 5 + int(math.floor(index / 7))
+            int column = index % 7
+            value := row < totalRows ? matrix.get(selectedArchive, row, column) : -1
+        array.set(archiveFrame, 9 + index, value)
+    archiveHashA := 0
+    archiveHashB := 0
+    for index = 0 to 43
+        int value = int(array.get(archiveFrame, index))
+        archiveHashA := (archiveHashA * 65599 + ((value % 1000000007) + 1000000007) % 1000000007) % 1000000007
+        archiveHashB := (archiveHashB * 131071 + ((value % 1000000009) + 1000000009) % 1000000009) % 1000000009
+    array.set(archiveFrame, 44, archiveHashA)
+    array.set(archiveFrame, 45, archiveHashB)
+    array.set(archiveFrame, 46, archiveSeq)
+    archiveLastAt := timenow
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 0) : na, "ARROW24_PROTOCOL", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 1) : na, "ARROW24_RUN_EPOCH", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 2) : na, "ARROW24_SEQ_BEGIN", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 3) : na, "ARROW24_EMITTED_AT", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 4) : na, "ARROW24_WINDOW_END", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 5) : na, "ARROW24_TF_MS", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 6) : na, "ARROW24_TOTAL_ROWS", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 7) : na, "ARROW24_PAGE_INDEX", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 8) : na, "ARROW24_META_ID", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 9) : na, "ARROW24_DATA_0", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 10) : na, "ARROW24_DATA_1", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 11) : na, "ARROW24_DATA_2", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 12) : na, "ARROW24_DATA_3", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 13) : na, "ARROW24_DATA_4", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 14) : na, "ARROW24_DATA_5", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 15) : na, "ARROW24_DATA_6", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 16) : na, "ARROW24_DATA_7", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 17) : na, "ARROW24_DATA_8", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 18) : na, "ARROW24_DATA_9", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 19) : na, "ARROW24_DATA_10", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 20) : na, "ARROW24_DATA_11", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 21) : na, "ARROW24_DATA_12", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 22) : na, "ARROW24_DATA_13", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 23) : na, "ARROW24_DATA_14", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 24) : na, "ARROW24_DATA_15", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 25) : na, "ARROW24_DATA_16", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 26) : na, "ARROW24_DATA_17", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 27) : na, "ARROW24_DATA_18", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 28) : na, "ARROW24_DATA_19", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 29) : na, "ARROW24_DATA_20", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 30) : na, "ARROW24_DATA_21", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 31) : na, "ARROW24_DATA_22", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 32) : na, "ARROW24_DATA_23", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 33) : na, "ARROW24_DATA_24", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 34) : na, "ARROW24_DATA_25", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 35) : na, "ARROW24_DATA_26", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 36) : na, "ARROW24_DATA_27", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 37) : na, "ARROW24_DATA_28", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 38) : na, "ARROW24_DATA_29", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 39) : na, "ARROW24_DATA_30", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 40) : na, "ARROW24_DATA_31", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 41) : na, "ARROW24_DATA_32", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 42) : na, "ARROW24_DATA_33", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 43) : na, "ARROW24_DATA_34", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 44) : na, "ARROW24_CHECKSUM_A", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 45) : na, "ARROW24_CHECKSUM_B", display = display.data_window, format = format.price, precision = 0, editable = false)
+plot(barstate.islast and archiveSupported ? array.get(archiveFrame, 46) : na, "ARROW24_SEQ_END", display = display.data_window, format = format.price, precision = 0, editable = false)

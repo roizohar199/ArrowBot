@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Arrow · נתוני נרות חיים</title><link rel="stylesheet" href="live-ohlc.css"></head>
+<body><main>
+  <header><div><span class="brand" dir="ltr">Arrow</span><span class="help" id="extension-version" dir="ltr">0.31.9</span><h1>נתוני נרות חיים מ־TradingView</h1></div><nav><a href="replay-research.html">מחקר Replay ב־NQ</a> · <a href="guide-library.html" target="_blank" rel="noopener">ספריית המדריך</a> · <a href="experiment.html">לוח המעקב</a> · <a href="#research-upgrades">מחקר מקביל</a></nav></header>
+  <section id="paper-user-power-bar" class="bot-power-bar" hidden data-state="off" aria-labelledby="paper-user-power-title">
+    <div class="bot-power-summary"><div class="bot-power-heading"><h2 id="paper-user-power-title">הפעלת Arrow</h2><span id="paper-user-power-state" role="status" aria-live="polite">כבוי</span></div><p id="paper-user-power-detail">החשבון שנבחר · כיבוי הבוט אינו סוגר פוזיציות.</p></div>
+    <div class="bot-power-actions"><button id="paper-user-arm" type="button" class="bot-power-start" disabled>הפעלת הבוט</button><button id="paper-user-disarm" type="button" class="bot-power-stop" disabled>כיבוי הבוט</button></div>
+  </section>
+<p class="help"><a href="execution-accounts.html">חשבונות וחיבורים · הוספה ובחירה לפני הפעלה</a> · <a href="user-market-research.html">כניסת Buy Market / Sell Market במחקר · ניהול הסיכון בידיך</a></p>
+<details class="telegram-alerts" id="telegram-alerts" hidden>
+  <summary>התראות טלגרם</summary>
+  <p id="telegram-status" class="help" role="status">טוען את הגדרות הטלגרם…</p>
+  <div id="telegram-pair-form" class="connection">
+    <label>טוקן הבוט מ־BotFather<input id="telegram-token" type="password" dir="ltr" autocomplete="off" required></label>
+    <button type="button" id="telegram-begin" disabled>חיבור בוט קיים</button>
+  </div>
+  <div id="telegram-pair-step" class="connection" hidden>
+    <a id="telegram-link" target="_blank" rel="noopener noreferrer">פתיחת קישור החיבור בטלגרם</a><button type="button" id="telegram-finish" disabled>כבר לחצתי Start · אימות הצ׳אט</button>
+  </div>
+  <div id="telegram-manual-step" hidden>
+    <p class="help"><a id="telegram-manual-link" target="_blank" rel="noopener noreferrer">פתחו את הצ׳אט עם הבוט ולחצו Start</a>. הזינו את המזהה המספרי מהפרופיל שלכם בטלגרם.</p>
+    <details><summary>איפה מוצאים את ה־Chat ID?</summary><p class="help">ב־Telegram Desktop פתחו Settings ← Advanced ← Experimental settings והפעילו Show Peer IDs in Profile. פתחו את הפרופיל שלכם והעתיקו את המספר שמופיע ליד ID.</p></details>
+    <div class="connection">
+      <label>מזהה חשבון טלגרם (Chat ID)<input id="telegram-chat-id" type="text" inputmode="numeric" dir="ltr" autocomplete="off" maxlength="35"></label>
+      <button type="button" id="telegram-send-code" disabled>שליחת קוד אימות</button>
+    </div>
+    <div id="telegram-verify-step" class="connection" hidden>
+      <label>הקוד מהצ׳אט הפרטי<input id="telegram-code" type="text" dir="ltr" autocomplete="off" maxlength="8"></label>
+      <button type="button" id="telegram-verify-code" disabled>אימות וחיבור</button>
+    </div>
+  </div>
+  <div id="telegram-options" hidden>
+    <label class="follow-setting"><input id="telegram-signal" type="checkbox">איתות כניסה חי</label>
+    <label class="follow-setting"><input id="telegram-fill" type="checkbox">כניסה מאומתת בפייפר</label>
+    <div class="connection"><button type="button" id="telegram-save" disabled>שמירת העדפות</button><button type="button" id="telegram-test" disabled>שליחת בדיקה</button><button type="button" id="telegram-disconnect" disabled>ניתוק טלגרם</button></div>
+    <p id="telegram-delivery" class="help" aria-live="polite"></p>
+  </div>
+</details>
+<section class="panel" id="warmup3000-panel" aria-labelledby="warmup3000-title"><h2 id="warmup3000-title">חימום · 3,000 נרות דקה</h2><p id="warmup3000-status" role="status">ההיסטוריה תעובד מהנר הישן לחדש בהפעלת הבוט.</p><p id="warmup3000-progress" class="help"></p><p id="warmup3000-detail" class="help">המעקב החי פועל במקביל. איתות היסטורי אינו פקודה לביצוע כעת. SL ו־TP בידיך.</p></section>
+<section class="panel closest-strategy-panel" aria-labelledby="closest-strategy-title"><div id="closest-strategy" aria-live="off"><strong id="closest-strategy-title">אסטרטגיות קרובות לאישור</strong></div>
+  <details class="closest-strategy-journal"><summary>יומן אסטרטגיות · 20 שינויים אחרונים</summary><ul id="closest-strategy-journal"></ul></details>
+</section>
+<p id="user-managed-live-note" class="help" hidden>בחרו חשבון שמור, חברו ב־TradingView את אותו חשבון והגדירו את פריסט ה־Buy/Sell Market המקורי שלכם. לחצו ״הפעלת הבוט״ בראש הלוח. אותו כפתור משמש לפייפר ולחשבונות Tradovate שנבחרו. נבדקים זהות החשבון ובקרי ה־Market של גרף הדקה הפעיל; הבוט בוחר רק את צד האיתות ואינו כותב כמות, סטופ או יעד. FULL SCREENS נתמך בלי להחליף פריסה. ירוק ״פעיל״ מציין המתנה לאיתות חדש. כיבוי אינו סוגר פוזיציות.</p>
+  <p class="intro" id="live-mode-intro">הגשר האישי מציג נתוני נרות בחלון הנתונים של TradingView. הערכים מתחלפים בכל עדכון ואינם מצטברים בלוג. אישור איתות דורש נתונים סופיים, הקשר ותוכנית סיכון.</p>
+  <section class="panel account-panel" aria-labelledby="account-title"><div class="section-title"><h2 id="account-title">החשבון להפעלה הקרובה</h2><span class="account-badge" id="account-review-badge">נדרשת הגדרה לפני התחלה</span></div>
+    <div class="account-picker"><label>פרופיל חשבון<select id="account-profile"><option value="">פרופיל חדש</option></select></label><button id="edit-account">הגדרת חשבון</button><button id="new-account">פרופיל חדש</button></div>
+    <p id="account-summary" class="help">בחרו חשבון והגדירו תקציב, עמלה והחלקה לפני כל התחלת מעקב ואיתותים.</p><p id="account-storage-note" class="help"></p>
+    <p class="help">זהו פרופיל חישוב מקומי. הבחירה אינה כניסה לחשבון ברוקר ואינה מאמתת עמלות או ביצועים בפועל.</p>
+  </section>
+  <p id="guide-threshold-profile" class="help" hidden></p>
+  <p id="candle-markers-status" class="help" role="status">סימון הנרות ממתין למקור מאומת. חץ תכלת או כתום מציין מילוי מקורי מאומת בזמן ובמחיר המילוי. עיגול אפור הוא אישור מחקר בלבד. כל תוצאות מחקר 24 השעות זמינות בטבלה.</p>
+  <section class="panel" aria-labelledby="history24-title"><h2 id="history24-title">24 שעות אחורה · מחקר ברקע</h2>
+    <p id="history24-status" role="status">סריקת 24 שעות תתחיל ברקע בהפעלת הבוט.</p><p id="history24-coverage" class="help"></p>
+    <p class="help">בכל הפעלה מושלמים רק נרות חסרים. הנתונים נשמרים גם לאחר כיבוי המחשב. הסריקה אינה תנאי להפעלת המסלול החי. אישור עבר הוא תרחיש מחושב, ואינו עסקה שבוצעה או הוכחת רווחיות.</p>
+    <p id="history24-summary" class="help"></p><div class="table-wrap"><table><thead><tr><th>זמן אישור</th><th>כיוון</th><th>מחיר אישור</th><th>אסטרטגיות</th></tr></thead><tbody id="history24-rows"></tbody></table></div>
+    <div class="actions"><button id="history24-previous" disabled>חדשים יותר</button><span id="history24-page"></span><button id="history24-next" disabled>ישנים יותר</button></div>
+  </section>
+  <section class="panel" aria-labelledby="connection-title"><h2 id="connection-title">מקור הנתונים</h2>
+    <div class="connection"><label>מסלול מקור<select id="live-transport"><option value="window">חלון הנתונים · מומלץ לקריאה רציפה</option><option value="logs">Pine Logs · מסלול בדיקה מוגבל</option></select></label><label>לשונית TradingView<select id="live-tab"><option value="">טוען לשוניות…</option></select></label><button id="refresh-tabs">רענון לשוניות</button><button id="connect-live" class="primary">הגדרת חשבון והתחלת מעקב</button><button id="stop-live" disabled>עצירה</button><button id="popout-live">חלון מעקב נפרד</button></div>
+    <p class="help">במצב ניהול הסיכון בידיך נתמכים עד שלושה גרפי NQ בפריסת FULL SCREENS שלך או בחלון המחקר, כאשר גרף הדקה הוא הפעיל. אין צורך לשנות את מספר הגרפים או את מסגרות הזמן שלהם. נתוני 5 ו־15 דקות נקראים מהמקור. במסלול המחקר הישן נדרש גרף יחיד במסגרת זמן קטנה מ־5 דקות. השאירו את חלון המחקר פעיל ונראה; סמן על נר ישן או נתונים שאינם מתקדמים חוסמים אישור חי.</p>
+    <label>לשונית לוגי ההכנה<select id="bootstrap-log-tab"><option value="">לוגים באותה לשונית גרף · בדיקה בלבד</option></select></label>
+    <button id="prepare-window-history" type="button">טעינת היסטוריה לפני המסחר</button><p id="preopen-history-status" class="help" role="status">אפשר להכין את היסטוריית המסחר הקודם לפני פתיחת השוק.</p>
+    <p class="help">להכנה מראש פתחו את עותק המחקר ב־Pine Editor, ובתפריט שלו בחרו Open editor → New window. בעורך הנפרד פתחו Pine logs והשאירו אותו פתוח ומקושר לגרף. בגרף המחקר הציגו Data window. רעננו כאן לשוניות, בחרו בעורך ב״לשונית לוגי ההכנה״ ולחצו על טעינת היסטוריה.</p>
+    <p class="help">פתיחה או סגירה של Pine Logs מפעילה מחדש את המקור ב־TradingView. לכן משאירים את חלון העורך פתוח במהלך המעקב; החלפת הפעלת מקור מבטלת את ההכנה ודורשת טעינה חדשה. נקראות רק שלוש הודעות היסטוריה מוגבלות. הקריאה הרציפה נשארת בחלון הנתונים, והיסטוריה מוכנה אינה אישור לנתונים חיים או לעסקה.</p>
+    <p class="help">במסלול חלון הנתונים נתמכים מחירים המיוצגים בדיוק בארבע ספרות עשרוניות; מקור הזקוק לדיוק אחר נחסם. נפח מועבר בשש ספרות עשרוניות. מסלול הלוגים מוגבל במכסת טקסט ואינו מקור רציף ללא הגבלה.</p>
+    <label class="follow-setting" id="legacy-follow-setting" hidden><input id="follow-logs" type="checkbox" checked>מעקב אוטומטי אחר ההודעה האחרונה בלוג הגשר המוגבל</label>
+    <p id="feed-status" role="status">ממתין לחיבור.</p><p id="source-proof" class="help">לא אומתו נכס, טיימפריים, מצב שוק ומצב Replay.</p>
+    <details><summary>הכנת המקור ב־TradingView</summary><ol><li><a href="tradingview-data-window-bridge.pine" target="_blank" rel="noopener">פתחו את גשר חלון הנתונים</a> והעתיקו אותו ל־Pine Editor אישי. לחצו Update on chart. אין צורך לפרסם.</li><li>הריצו אותו על גרף יחיד של נרות רגילים. בחרו כאן את לשונית הגרף והתחילו מעקב; המערכת תפתח את Data window של Arrow.</li><li>ההיסטוריה הראשונה משמשת חימום בלבד; התרעות מתחילות רק ממערכים שנוצרו לאחר בסיס החיבור.</li></ol><p class="help">אין צורך ב־Webhook ציבורי. מקור מושהה, Replay, חוסר התאמה או מצב זמן אמת שלא אומת חוסמים התרעה חיה. <a href="tradingview-ohlc-bridge.pine" target="_blank" rel="noopener">גשר הלוגים המוגבל לבדיקות</a> זמין בנפרד.</p></details>
+  </section>
+  <section class="panel" id="paper-user-panel" hidden aria-labelledby="paper-user-title"><h2 id="paper-user-title">כניסת Market אוטומטית · הסיכון בידיך</h2>
+    <p class="help">איתות חדש מאושר לפי תנאי האסטרטגיה מפעיל את בקר ה־Buy או Sell המקורי של גרף הדקה בחשבון שנבחר ונבדק. הפריסט והכמות הם שלך. אין בדיקת SL/TP או חישוב סיכון של הבוט כתנאי לכניסה. תוצאת הפקודה נצפית כדי למנוע כניסה כפולה; הבוט אינו מנהל את העסקה.</p>
+    <p id="paper-user-account" class="help" role="status">טרם נקראו זהות Paper וכמות מקוריות.</p>
+    <label class="follow-setting"><input id="paper-user-consent" type="checkbox">להפעיל כניסות Market בחשבון שנבחר ונבדק, עם הפריסט והכמות שהגדרתי; ניהול הסיכון והעסקה בידיי.</label>
+    <div class="connection"><button id="paper-user-inspect" type="button">בדיקת החשבון ובקרי Market ללא שיגור</button></div>
+    <p id="paper-user-status" class="help" role="status">כניסות הפייפר כבויות.</p>
+    <details><summary>יומן ביצוע והתאוששות</summary><p class="help">לבדיקת ניסיון פייפר לא מוכרע: בחרו ייצוא Arrow עם קבלת השיגור המקורית. נבדקים החשבון, הפקודה והזמן המקוריים ושתי קריאות סגירה. בדיקה זו אינה שולחת פקודה; האירוע הישן נשאר צרוך. לאחר סגירה מאומתת אפשר להפעיל מחדש.</p><label>אימות ניסיון פייפר מייצוא מקורי <input id="paper-user-recovery-export" type="file" accept="application/json,.json"></label><pre id="paper-user-journal" dir="ltr"></pre></details>
+  </section>
+  <section class="panel" id="paper-execution-panel" aria-labelledby="paper-execution-title"><h2 id="paper-execution-title">ביצוע אוטומטי בפייפר בלבד</h2>
+    <p class="help">היעד הוא חשבון Paper Trading הפנימי של TradingView בחלון המחקר. מסלול זה אינו מתחבר ל־Tradovate או לחשבון Apex. רק איתות חי מאושר חדש, כל מסנני החובה ותוכנית סיכון של עד 200 דולר לחוזה NQ אחד יכולים להגיע להכנת פקודה.</p>
+    <p id="paper-account-status" class="help" role="status">חשבון הפייפר טרם נבדק. יש להציג את לוח החשבון ואת טופס הפקודה בגרף המחקר.</p>
+    <label class="follow-setting"><input id="paper-consent" type="checkbox">להפעיל פקודות וירטואליות בלבד בחשבון Paper Trading שנבדק, לאחר אימות הפרופיל והעלויות.</label>
+    <div class="connection"><button id="paper-read" type="button">בדיקת חיבור לפייפר</button><button id="paper-arm" type="button" class="primary" disabled>הפעלת כניסה אוטומטית בפייפר</button><button id="paper-disarm" type="button" disabled>כיבוי ביצוע אוטומטי</button></div>
+    <p id="paper-status" class="help" role="status">ביצוע אוטומטי כבוי</p>
+    <p id="paper-verification-status" class="help" role="status">בדיקת מילוי מאיתות שוק חי עדיין לא הושלמה. טופס בדיקה או פקודה ממתינה אינם הוכחת כניסה או הגנות פעילות.</p>
+    <p class="help">נדרש פרופיל מסוג דמו · Paper Trading. מסחר אוטומטי מתחיל כבוי בכל פתיחה; עצירת מעקב, שינוי מקור, החלפת חשבון או איבוד מקור חי מכבים אותו. קליק שנשלח אינו הוכחת מילוי או הגנה; תוצאה לא ודאית ננעלת לבדיקה, ללא ניסיון חוזר אוטומטי.</p>
+    <details><summary>בדיקת טופס פייפר ללא שיגור</summary><p class="help">מכינה טופס בדיקה של חוזה אחד, סטופ 37 טיקים ויעד 74 טיקים. זו בדיקת הטופס בלבד, ללא איתות שוק וללא לחיצה על כפתור הפקודה.</p><button id="paper-test-draft" type="button" disabled>הכנת טופס TEST בלבד · ללא פקודה</button><p id="paper-test-status" class="help" role="status">טרם הוכן טופס בדיקה.</p></details>
+    <details><summary>יומן ביצוע הפייפר</summary><pre id="paper-journal" dir="ltr">טרם הופעל ביצוע.</pre></details>
+  </section>
+  <section class="panel live-result" id="live-result" aria-labelledby="result-title"><div class="section-title"><h2 id="result-title">הנר הנצפה והאיתות</h2><button id="focus-live" aria-pressed="false">תצוגת בדיקה מרוכזת</button><button id="stop-focus-live" disabled>עצירת מעקב</button><button id="export-live-focus" disabled>ייצוא מצב המעקב</button><span id="source-identity" class="muted" dir="ltr">—</span></div>
+    <div id="live-output" aria-live="polite"><div class="ohlc"><div><span>פתיחה · O</span><b id="live-open">—</b></div><div><span>גבוה · H</span><b id="live-high">—</b></div><div><span>נמוך · L</span><b id="live-low">—</b></div><div><span>מחיר נצפה · C</span><b id="live-close">—</b></div></div><p id="live-bar-time" class="help">אין נר שהתקבל מהמקור.</p><p id="signal-state">ממתין לנתוני נרות סגורים.</p><p id="signal-detail" class="help">איתות מאושר דורש צורה, הקשר, אישור מאוחר ותוכנית סיכון כאשר היא נדרשת.</p></div>
+    <p id="forming-preview-status" class="help">תבנית מתהווה היא מועמדת זמנית בלבד; אישור דורש נר סגור מאוחר.</p>
+    <section class="forming-panel" aria-labelledby="forming-conditions-title"><h2 id="forming-conditions-title">תנאי הכניסה בתוך הנר</h2><p class="help">תצוגה זמנית לפי העדכונים שנקלטו. תנאי שהתקיים בנר פתוח עשוי להתבטל לפני הסגירה.</p><div id="forming-conditions" aria-live="off"><p class="help">ממתין למקור חי ולהקשר תקין.</p></div></section>
+    <p id="live-volume" class="help">נפח: טרם התקבל.</p><p id="intrabar-status" class="help">תנועות בתוך הנר: טרם נקלטו עדכונים.</p><svg id="intrabar-trace" viewBox="0 0 600 76" role="img" aria-label="מסלול המחירים שנצפו בנר הפעיל"><title>רק עדכונים שנקלטו בפועל, ללא השלמת תנועות חסרות</title></svg>
+    <p id="history-status" class="help">היסטוריית חימום: 0 נרות.</p><p id="timeframes-status" class="help">טיימפריימים גבוהים: ממתין לנתונים.</p>
+    <div class="timing"><p id="wake-status" class="help">קריאה מונעת עדכון: טרם התחבר מקור.</p><p id="timing-status">זמן קריאת הדף עד הזדמנות הציור טרם נמדד.</p><p id="source-timing-status" class="help">מתצפית מקור עקבית בגרף עד התוצאה: טרם נמדד.</p><p class="help">מדידת המקור מתחילה בתצפית הראשונה במסגרת נתונים עקבית ונראית לאחר החיבור. זמן הבורסה, העברת הנתונים אל TradingView, ביצוע Pine והרינדור שקדם לתצפית אינם נמדדים. המדידה מסתיימת בהזדמנויות ציור בדפדפן, ללא הוכחה להצגת פיקסלים פיזית. נר פתוח אינו איתות מאושר; אישור דורש נר מאוחר סגור.</p></div>
+    <p id="signal-delivery-status" class="help" role="status">איתות חי מאושר יוצג גם בכרטיס Arrow על גרף המחקר.</p>
+    <details class="delivery-test"><summary>בדיקת מסירה מבוקרת</summary><p class="help">בודקת אישור חיובי במנוע על נתונים סינתטיים ואת הצגת כרטיס TEST על הגרף הנבחר. הנתונים אינם מוזנים למעקב או ליומן האיתותים החיים.</p><button id="test-signal-delivery" disabled>בדיקת מסירה בלבד · נתונים סינתטיים</button><p id="delivery-test-status" class="help" role="status">טרם בוצעה בדיקת מסירה מבוקרת.</p></details>
+  </section>
+  <section class="panel"><details><summary>כללי איתות וסיכון</summary><p class="help">הכללים מופעלים רק בסגירת נר מאומתת. צילום בסיס או חיבור מחדש אינם יוצרים התרעות היסטוריות. ביצוע פייפר דורש הפעלה נפרדת ובדיקה של חשבון Paper Trading; קיצורי מסחר אינם מופעלים.</p>
+    <p class="help">ניהול הסיכון בידיך: התקציב, מספר החוזים והעלויות מוגדרים בפרופיל החשבון ומוצגים לבדיקה בכל התחלה. אישור הכיוון הטכני מוצג בנפרד עם כל שבעת מסנני ההקשר; הכניסה האוטומטית דורשת גם תוכנית העומדת בהגדרותיך. כל התבניות והמסננים מחושבים במקביל; הסימון קובע אילו מסננים הם תנאי חובה למסלול המחקר הרגיל.</p><div class="checks"><label><input id="require-location" type="checkbox" checked>דרוש אזור מחיר ידוע</label><label><input id="require-higher-timeframe" type="checkbox" checked>דרוש תיאום טיימפריימים 5 ו־15 דקות</label><label><input id="require-ema" type="checkbox" checked>דרוש מסנן EMA</label><label><input id="require-fib" type="checkbox" checked>דרוש מסנן פיבונאצ׳י</label><label><input id="require-trendline" type="checkbox" checked>דרוש קו מגמה</label><label><input id="enable-supply-demand" type="checkbox" checked>חשב אזורי היצע וביקוש לפי ההגדרה המחקרית</label><label><input id="require-supply-demand" type="checkbox" checked>דרוש אזור היצע וביקוש</label></div><p class="help">הגשר שולח נרות גבוהים סגורים בלבד. חסר בנתוני טיימפריים נדרש חוסם אישור. הגדרת היצע וביקוש מתארת צורת מחיר ואינה מוכיחה פעילות מוסדית.</p><p id="source-contract" class="help">מפרט הנכס יופיע לאחר קליטה; ערכי סיכון אינם מומצאים ממפרט חסר.</p>
+    <button id="apply-live-rules">שמירת כללי האיתות</button><p class="help">שינוי כללים עוצר את ההפעלה ודורש בדיקת חשבון והתחלה חדשה. איתותים שכבר נרשמו נשמרים ביומן הייצוא עם פרמטריהם.</p>
+  </details></section>
+  <section class="panel" id="research-upgrades" aria-labelledby="research-title">
+    <details open><summary id="research-title">מחקר מקביל · תבניות נוספות ו־TP / SL מבניים</summary>
+      <label class="follow-setting"><input id="research-enabled" type="checkbox" checked>חישוב ותיעוד ברקע</label>
+      <p class="help">הכניסות והפריסט נשארים כפי שהגדרת. הגלאים והצעות היציאה כאן אינם מאשרים או חוסמים עסקאות. ההשוואה מתחילה ממילוי פייפר מאומת חדש ומתעדת שתי סימולציות יציאה; זו אינה תוצאת היציאה האישית שלך.</p>
+      <p id="research-status" class="help" role="status">ממתין לניתוח נרות סגורים.</p>
+      <div id="research-findings" class="help"></div>
+      <details id="nq-holdout" class="pattern-study-quality">
+        <summary>מדגם NQ נפרד · השוואת תבניות ומתנדים</summary>
+        <div id="nq-holdout-result" class="help">טוען את תוצאות המדגם…</div>
+      </details>
+      <section id="pattern-study" aria-labelledby="pattern-study-title">
+        <h3 id="pattern-study-title">זיהוי תבניות ב־3,000 נרות</h3>
+        <label class="help">ייצוא Arrow של 3,000 נרות<input id="pattern-study-file" type="file" accept="application/json,.json" multiple></label>
+        <p class="help">בבחירת כמה ייצואים, האחרון משמש לתחקור והקודמים משמשים ייחוס לנפח.</p>
+        <p id="pattern-study-status" class="help" role="status"></p>
+        <div id="pattern-study-result" class="help"></div>
+      </section>
+      <label class="help">טעינת תיעוד פייפר קודם להשוואה<input id="research-import" type="file" accept="application/json,.json"></label>
+      <p id="research-import-status" class="help" role="status">אפשר לטעון ייצוא Arrow מקורי. העסקה תסומן כתיעוד עבר; לא נוצרת כניסה חדשה.</p>
+      <label class="help">תוצאות בפועל · Trade History של פייפר<input id="research-paper-history" type="file" accept=".csv,text/csv"></label>
+      <p id="research-paper-history-status" class="help" role="status">הקישור משתמש במזהה הכניסה, חוזה, כיוון, מחיר וזמן. מיועד לייצוא באנגלית בשעון ישראל.</p>
+      <details><summary>עלויות להשוואה · הנחות מחקר בלבד</summary><div class="fields">
+        <label>עמלה לסיבוב מלא לחוזה<input id="research-commission" type="number" min="0" step="any" dir="ltr" placeholder="לא הוגדרה"></label>
+        <label>החלקה לסיבוב מלא · טיקים<input id="research-slippage" type="number" min="0" step="any" dir="ltr" placeholder="לא הוגדרה"></label>
+      </div><p class="help">ערכים אלה משמשים עסקאות מחקר חדשות בלבד. בלי שניהם מוצג ברוטו. התוכנית המבנית קופאת בכניסה: סטופ הביטול של התבנית ויעד טיק לפני הפיבוט המאושר הקרוב שטרם נשבר.</p></details>
+      <p id="research-comparison-summary" class="help"></p><ol id="research-trades" class="research-trades"></ol>
+      <p class="help">כשאין יעד ידוע, פער בנתונים או סדר נגיעות ודאי — העסקה אינה נספרת כהשוואה מוכרעת. MFE ו־MAE הם מעטפת נרות ולא רווח אישי. התיעוד נשמר במחשב ונכלל בייצוא מצב המעקב. <a href="docs/research-upgrade-coverage-HE.md" target="_blank" rel="noopener">מפת הכיסוי והמגבלות</a></p>
+    </details>
+  </section>
+  <section class="panel" id="scenario-panel"><div class="section-title"><h2>ניתוח התרחישים והסבר ההחלטות</h2><a href="guide-library.html" target="_blank" rel="noopener">47 נושאי המדריך והדוגמאות</a></div><p id="analysis-headline" class="help">הניתוח יופיע לאחר היסטוריה תקינה וסגירת נר מאומתת.</p><div id="analysis-explanation"></div></section>
+  <section class="panel"><div class="section-title"><h2>יומן התרעות חיות</h2><button id="export-live" disabled>ייצוא נתונים ומדידות</button></div><p id="alert-count" class="help">טרם נרשמה התרעה חיה.</p><div class="table-scroll"><table><thead><tr><th>זמן קבלה</th><th>נכס וכיוון</th><th>תבניות ורמות</th><th>סיבה</th></tr></thead><tbody id="live-alerts"><tr><td colspan="4">אין התרעות. עצם היעדר התרעה אינו תקלה.</td></tr></tbody></table></div><details><summary>עדות מקור ואבחון</summary><pre id="live-evidence" dir="ltr">טרם התקבל מקור.</pre></details></section>
+  <footer><a href="guide-signals.html" target="_blank" rel="noopener">ניתוח OHLC ומלוא כללי המחקר</a><span>נתונים מקומיים · כל אסטרטגיה לגופה · כניסות רק בהפעלת החשבון הנבחר</span></footer>
+</main>
+<dialog id="account-dialog" aria-labelledby="account-dialog-title" aria-describedby="account-dialog-intro">
+  <form id="account-form" novalidate><div class="account-dialog-heading"><div><p class="eyebrow">לפני כל התחלה</p><h2 id="account-dialog-title">הגדרת החשבון והסיכון</h2></div><button type="button" id="cancel-account-top" class="quiet" aria-label="סגירת הגדרת החשבון">✕</button></div>
+    <div class="account-dialog-body"><p id="account-dialog-intro" class="help">בדקו את החשבון והעלויות להפעלה הקרובה. ההגדרות נשמרות במחשב; חיבור לברוקר ופקודות מסחר אינם מופעלים כאן.</p>
+      <div class="fields account-identity-fields"><label>שם הפרופיל<input id="account-label" maxlength="80" autocomplete="off" placeholder="למשל: חשבון NQ שלי"></label><label>שם ברוקר או ספק · אופציונלי<input id="account-broker" maxlength="80" autocomplete="off" placeholder="לצורך זיהוי אישי"></label><label>סוג החשבון<select id="account-mode"><option value="PAPER">דמו · Paper Trading</option><option value="LIVE">חשבון אמיתי · הגדרה ידנית</option><option value="RESEARCH">מחקר</option></select></label><label>נכס מדויק ב־TradingView<input id="account-instrument" dir="ltr" maxlength="100" value="CME_MINI:NQ1!" autocomplete="off"></label><label>מטבע החישוב<select id="account-currency"><option value="USD">USD · דולר</option></select></label><label>גודל טיק<input id="account-tick-size" type="number" min="0" step="any" dir="ltr" value="0.25"></label></div>
+      <h3>תקציב ועלויות לחוזה</h3><div class="fields"><label>תקציב סיכון לעסקה · דולר<input id="risk-budget" type="number" min="0" step="any" dir="ltr" value="200"></label><label>ערך נקודה לחוזה · דולר<input id="point-value" type="number" min="0" step="any" dir="ltr" value="20"></label><label>מספר חוזים מרבי<input id="max-contracts" type="number" min="1" step="1" dir="ltr" value="1"></label><label>עמלה כוללת לפתיחה וסגירה · דולר<input id="commission" type="number" min="0" step="any" dir="ltr" placeholder="יש להזין ערך, גם אם 0"></label><label>החלקה כוללת לפתיחה וסגירה · טיקים<input id="slippage" type="number" min="0" step="any" dir="ltr" placeholder="יש להזין הנחת חישוב"></label><label>יעד מחקר מתוכנן · R ברוטו<input id="reward-risk" type="number" value="2" min="0" step="any" dir="ltr"></label></div>
+      <input id="require-risk" type="checkbox" checked disabled hidden><p id="risk-note" class="help"></p><p class="help">העמלה וההחלקה הן ערכי תכנון שאתם מגדירים, ולא נתון מאומת של הברוקר. החלקה בפועל יכולה להשתנות.</p>
+      <div class="account-review-summary"><h3>בדיקה לפני הפעלה</h3><p id="account-budget-summary">השלימו את השדות כדי לראות את התקציב לאחר עלויות.</p><p class="help">העלות הכוללת לחוזה היא מרחק הסטופ × ערך נקודה, בתוספת עמלה והחלקה. מערך שחורג מהתקציב נפסל.</p></div>
+      <label class="review-check"><input id="account-costs-reviewed" type="checkbox">בדקתי את החשבון, מגבלת הסיכון, העמלה וההחלקה להפעלה הזו</label>
+      <p id="account-form-error" class="form-error" role="alert" hidden></p><p id="account-dialog-status" class="help" role="status"></p>
+    </div>
+    <div class="account-dialog-actions"><button id="start-account-session" type="submit" class="primary">שמירת ההגדרות והתחלת המעקב</button><button id="save-account-profile" type="button">שמירת פרופיל בלבד</button><button id="cancel-account" type="button" class="quiet">ביטול</button></div>
+  </form>
+</dialog>
+<script type="module" src="live-ohlc.mjs?revision=nq-holdout-1"></script><script type="module" src="live-pattern-study.mjs"></script><script type="module" src="live-nq-holdout.mjs"></script></body></html>

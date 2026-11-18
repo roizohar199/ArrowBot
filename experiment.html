@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Arrow · זיהוי חצים ונרות</title>
+  <link rel="stylesheet" href="experiment.css">
+</head>
+<body>
+  <main class="workspace">
+    <header class="app-header">
+      <div class="brand"><span class="brand-name" dir="ltr">Arrow</span><h1>זיהוי חצים ונרות</h1></div>
+      <span class="version">גרסה <bdi>0.30.3</bdi></span>
+    </header>
+
+    <section class="capture-toolbar" aria-label="בקרת מעקב">
+      <div class="controls capture-actions">
+        <button id="share" class="button-primary">שיתוף גרף</button>
+        <button id="auto" disabled>מעקב אוטומטי</button>
+        <button id="stop" class="button-quiet" disabled>עצירת מעקב</button>
+      </div>
+      <p id="status" role="status" tabindex="0">ממתין לשיתוף גרף.</p>
+    </section>
+
+    <div class="monitor-grid">
+      <section class="command-pane" aria-labelledby="shortcut-title">
+        <div class="pane-heading"><h2 id="shortcut-title">קיצורי מקלדת</h2><p id="shortcut-state" class="state-label" role="status" tabindex="0">קיצורי המקלדת כבויים</p></div>
+        <p class="key-map"><span class="long-key">קנייה <kbd dir="ltr">Shift+B</kbd></span><span class="short-key">מכירה <kbd dir="ltr">Shift+S</kbd></span></p>
+        <div class="target-setting"><label for="shortcut-target">לשונית הגרף</label><select id="shortcut-target" aria-describedby="shortcut-target-help"><option value="">טוען לשוניות TradingView…</option></select><p id="shortcut-target-help" class="supporting-text">בחרו את אותה לשונית שאתם משתפים במעקב. הקיצורים יישלחו רק לגרף הזה כשהוא פעיל.</p></div>
+        <button id="shortcut-toggle" aria-pressed="false">הפעל קיצורי מקלדת</button>
+        <p id="shortcut-status" class="operation-status" role="status" tabindex="0">התחילו מעקב ואז הפעילו קיצורים. חזרו ללשונית TradingView כדי לקבל מקשים.</p>
+        <p id="shortcut-focus-status" class="focus-status" role="status" tabindex="0">מיקוד הגרף ייבדק כשהקיצורים פעילים.</p>
+        <div class="position-readout"><h3>מצב לפי הסימון בגרף</h3><p id="position-state" role="status" data-state="UNKNOWN" tabindex="0">ממתין לבדיקה אוטומטית של מצב הפוזיציה</p><p id="position-detail" class="supporting-text" tabindex="0">מצב פנוי נבדק אוטומטית בתמונות הגרף. לאחר האימות ממתינים לחץ חדש; אין צורך באישור ידני.</p></div>
+
+        <div class="delay-setting">
+          <div class="shortcut-delay-row"><label for="shortcut-delay">דיליי לפני קיצור <span class="unit">(ms)</span></label><input id="shortcut-delay" type="number" min="0" max="10000" step="1" value="0" inputmode="numeric" dir="ltr" aria-describedby="shortcut-delay-help shortcut-delay-status"><span id="shortcut-delay-applied">דיליי פעיל: 0 ms</span></div>
+          <p id="shortcut-delay-help" class="supporting-text" tabindex="0">0 = ללא המתנה נוספת. שינוי חל על האיתות הבא.</p>
+          <p id="shortcut-delay-status" class="field-status" role="status" tabindex="0">טוען את הגדרת הדיליי…</p>
+        </div>
+
+        <div class="execution-readout">
+          <h3>ניסיון שליחה אחרון</h3>
+          <dl class="shortcut-last"><div><dt>קיצור אחרון</dt><dd><strong id="shortcut-last-key" dir="ltr">—</strong></dd></div><div><dt>שעה</dt><dd><time id="shortcut-last-time" dir="ltr">—</time></dd></div></dl>
+          <p id="shortcut-last-result" role="status" tabindex="0">טרם נשלח קיצור.</p>
+        </div>
+        <p class="execution-note">שליחת מקש אינה אישור לביצוע עסקה. מצב הפוזיציה מזוהה לפי הסימון בגרף, ללא אימות חשבון.</p>
+      </section>
+
+      <section class="readout-pane" aria-labelledby="readout-title">
+        <h2 id="readout-title">על הגרף</h2>
+        <div id="latest-arrow" class="latest-arrow" role="status" aria-live="polite"><span id="latest-arrow-symbol" aria-hidden="true">—</span><span id="latest-arrow-label" tabindex="0">אין חץ ברור בגרף</span></div>
+        <p class="supporting-text arrow-context">החץ הימני ביותר שנראה בגרף; אינו מעיד לבדו על איתות חדש.</p>
+        <div class="observation-readout" aria-live="polite"><h3>איתות אחרון שנבדק</h3><p id="signal-state" tabindex="0">טרם נבדק איתות חדש.</p><p id="signal-detail" class="supporting-text" tabindex="0">יופיע כאן כיוון החץ ותוצאת השליחה.</p></div>
+        <div class="price-readout"><h3>מחיר הגרף</h3><p id="price-number" dir="ltr" tabindex="0">—</p><p id="price-confidence" class="supporting-text" tabindex="0">אין קריאת מחיר מאומתת</p></div>
+        <section class="candle-readout" aria-labelledby="candle-title">
+          <h3 id="candle-title">נרות ותנועה בתוך הנר</h3>
+          <p id="candle-state" role="status" data-state="UNAVAILABLE" tabindex="0">ממתין למעקב אחר הנרות.</p>
+          <dl class="candle-metrics">
+            <div><dt>שינוי נצפה · px</dt><dd id="candle-delta" dir="ltr">—</dd></div>
+            <div><dt>מהירות · px/s</dt><dd id="candle-speed" dir="ltr">—</dd></div>
+            <div><dt>טווח נצפה · px</dt><dd id="candle-range" dir="ltr">—</dd></div>
+            <div><dt>היפוכי תנועה</dt><dd id="candle-reversals" dir="ltr">—</dd></div>
+          </dl>
+          <canvas id="candle-trace" width="420" height="64" role="img" aria-label="תנועה נצפית מאז תחילת המעקב אחר הנר; ערכי השינוי והטווח מוצגים מעל הגרף"></canvas>
+          <p id="candle-detail" class="supporting-text" tabindex="0">קריאת גוף ופתילים של נרות מלאים באדום וטורקיז. המדידה מתחילה מרגע הזיהוי.</p>
+          <p class="supporting-text candle-note">מעקב אחר הנר הימני ביותר שנראה. ערך חיובי = תנועה מעלה. הציגו גופי נרות ברוחב 3 פיקסלים לפחות, וסמנו אזור ללא עמודות נפח. קריאה חזותית ותיעוד מקומי, ללא אימון מודל או חיזוי; תנועות בין תמונות אינן נמדדות.</p>
+        </section>
+        <section class="guide-readout" aria-labelledby="guide-title">
+          <div class="pane-heading"><h3 id="guide-title">איתותי נרות לפי המדריך</h3><label class="guide-toggle"><input id="guide-enabled" type="checkbox" checked> מועמדים חזותיים</label></div>
+          <p id="guide-signal-state" role="status" data-state="WAITING" tabindex="0">ממתין לתמונות נרות.</p>
+          <p id="guide-signal-patterns" tabindex="0">—</p>
+          <p id="guide-signal-detail" class="supporting-text" tabindex="0">איתות מאושר דורש נרות OHLC סגורים, הקשר שוק ואישור לפי כללי המדריך.</p>
+          <div class="guide-links"><a href="live-ohlc.html" target="_blank" rel="noopener">הגדרת חשבון, סיכון ואיתותים חיים</a><a href="guide-library.html" target="_blank" rel="noopener">ספריית 47 נושאי המדריך, דוגמאות ותרגילים</a><a href="guide-signals.html" target="_blank" rel="noopener">הגדרות כללים וניתוח OHLC</a><a href="Candlestick_Codex_Guide_HE.txt" target="_blank" rel="noopener">קובץ המקור</a></div>
+          <p class="supporting-text guide-note">מועמד חזותי מתאר צורה בנר הנראה. אישור נבדק בנפרד לפי נרות סגורים, מבנה, אזור, תוקף וסיכון. איתותי המדריך מוצגים ונרשמים לתצפית.</p>
+        </section>
+      </section>
+    </div>
+
+    <details class="preview-section disclosure" open>
+      <summary><span>תצוגת המעקב</span><span class="summary-note">אזור הזיהוי והגרף המשותף</span></summary>
+      <div class="preview-content">
+        <details class="manual-controls disclosure">
+          <summary>סימון ידני</summary>
+          <div class="disclosure-content"><p class="supporting-text">סמנו בגרירה את הגרף, בתוכו את אזור הנרות החדשים, ולבסוף רצועה נפרדת סביב סרגל המחירים.</p><div class="controls"><button id="chart" disabled>סימון הגרף</button><button id="recent" disabled>סימון נרות חדשים</button><button id="price-region" disabled>סימון סרגל מחיר</button><button id="start" disabled>מעקב ידני</button></div></div>
+        </details>
+        <div class="preview-frame"><p class="preview-empty">שתפו גרף כדי להציג את תצוגת המעקב.</p><canvas id="preview" aria-label="תמונת הגרף לבחירת אזור"></canvas></div>
+        <p class="preview-legend supporting-text"><span class="legend-chart">גרף</span><span class="legend-recent">נרות חדשים</span><span class="legend-price">סרגל מחיר</span></p>
+      </div>
+    </details>
+
+    <section class="inspector" aria-label="פרטים וכלי אבחון">
+      <details class="disclosure">
+        <summary>אבחון זיהוי</summary>
+        <div class="disclosure-content diagnostics-content">
+          <p id="shortcut-detection" tabindex="0">ממתין לתמונת זיהוי. חצים נראים ואירועים חדשים מוצגים בנפרד.</p>
+          <p id="identity-status" class="diagnostic-slot" tabindex="0">אימות זהות החצים יופיע בזמן מעקב.</p>
+          <p id="candle-diagnostics" class="diagnostic-slot" tabindex="0">ממתין לתמונות נרות.</p>
+          <p id="entry-filter-status" class="diagnostic-slot" role="status" tabindex="0">סיבת אישור או פסילת החץ תופיע כאן.</p>
+          <div class="latency-readout"><h3>מהתמונה לבקשת המקש</h3><p id="signal-timing" class="diagnostic-slot" tabindex="0">ממתין לניסיון שליחה ראשון.</p><p class="supporting-text">המדידה מתחילה בפריים הראשון שהתקבל אצלנו ומסתיימת בבקשת המקש ל־Chrome. הדיליי שבחרתם מוצג בנפרד.</p></div>
+          <p id="timing-status" tabindex="0">זמני עיבוד יופיעו בזמן המעקב.</p>
+          <div id="capture-probe-controls"></div>
+          <div id="source-marker-probe-controls"></div>
+          <p id="capture-path-status" class="diagnostic-slot" role="status" tabindex="0">קליטה ברקע ובמזעור תיבדק בתחילת המעקב.</p>
+          <div class="capture-settings"><label for="capture-rate">קצב צילום מבוקש</label><select id="capture-rate" aria-describedby="capture-rate-help capture-rate-status"><option value="30">30 FPS</option><option value="60">60 FPS · ניסוי</option></select><button id="capture-compare" class="button-quiet" disabled>השוואת 30/60 · 20 שניות</button><p id="capture-rate-help" class="supporting-text">הקצב בפועל תלוי במקור. ההשוואה מודדת קליטה ועיבוד ומחזירה את ההגדרה שבחרתם.</p><p id="capture-rate-status" class="diagnostic-slot" role="status" tabindex="0">קצב ברירת המחדל הוא 30 FPS.</p><p id="capture-compare-result" class="diagnostic-slot" tabindex="0">טרם בוצעה השוואה.</p></div>
+          <div class="replay-settings"><h3>קטע אבחון מקומי</h3><p class="supporting-text">הקלטת 3 שניות של תמונות מהלשונית המשותפת לצורך שחזור ובדיקת זיהוי. הקובץ נשמר מקומית; זיהויי המערכת אינם סימון ידני של התוצאה הנכונה.</p><div class="controls"><button id="replay-record" class="button-quiet" disabled>הקלטת קטע אבחון</button><button id="replay-download" class="button-quiet" disabled>הורדת הקטע</button></div><p id="replay-status" class="diagnostic-slot" role="status" tabindex="0">טרם הוקלט קטע אבחון.</p></div>
+          <div class="price-diagnostics"><div><h3>קריאת מחיר מהתמונה</h3><p id="price-status" role="status" tabindex="0">ממתין לתחילת מעקב.</p><p class="supporting-text">המחיר נקרא מהתמונה ועשוי להיות שגוי.</p></div><div class="price-preview-slot"><canvas id="price-preview" aria-label="תג מחיר מצולם" hidden></canvas></div></div>
+        </div>
+      </details>
+      <details class="disclosure">
+        <summary>רישום פעילות</summary>
+        <div class="disclosure-content"><div class="log-toolbar"><p class="supporting-text">200 הרשומות האחרונות מוצגות כאן. ההורדה כוללת את כל רישום ההפעלה.</p><button id="download" class="button-quiet">הורדת רישום</button></div><pre id="log" aria-live="polite"></pre></div>
+      </details>
+      <details class="disclosure">
+        <summary>איך מתחילים</summary>
+        <div class="disclosure-content instructions"><ol><li>בחרו בלשונית הגרף את אותה לשונית TradingView שאתם משתפים, והתחילו מעקב אוטומטי.</li><li>בדקו שמסגרות הזיהוי מכסות את הגרף, את הנרות החדשים ואת סרגל המחיר, ושסימון הפוזיציה נשאר גלוי.</li><li>הפעילו קיצורי מקלדת וחזרו לגרף שנבחר. השאירו את לוח המעקב פתוח בלשונית אחרת.</li></ol><p>חץ קנייה חדש מפעיל <bdi>Shift+B</bdi>; חץ מכירה חדש מפעיל <bdi>Shift+S</bdi>, כאשר מצב פנוי אושר. חצים שכבר מופיעים בזמן תחילת המעקב משמשים להשוואה בלבד.</p><p>בזמן כניסה ממתינה או פוזיציה פתוחה חצים נוספים מדולגים ואינם נשמרים לשליחה מאוחרת. שלוש תמונות תקינות מאשרות סגירה ומחזירות את השליחה אוטומטית. תמונה לא ברורה אינה אישור שהעסקה נסגרה.</p><p>הדיליי הוא הזמן המינימלי מזיהוי האיתות עד שליחת הקיצור. זמן העיבוד עשוי להוסיף השהיה; 0 אינו מוסיף המתנה יזומה.</p><p>תווית צהובה מסמנת לונג ותווית סגולה מסמנת שורט. זיהוי המספר אינו נדרש לשליחת הקיצור. כיוון החץ ותוצאת השליחה של אותו איתות מוצגים באיתות האחרון שנבדק.</p><p>הזיהוי תלוי בסימון הגלוי בגרף ואינו מאמת חשבון. הבחירה נשארת פעילה עד כיבוי ידני; פתיחת לוח חדש מתחילה כבויה.</p></div>
+      </details>
+    </section>
+    <footer class="workspace-footer"><span dir="ltr">Arrow Observation Experiment</span><span>זיהוי חזותי. קיצורי מקלדת.</span></footer>
+  </main>
+  <script type="module" src="experiment.js"></script>
+</body>
+</html>
+

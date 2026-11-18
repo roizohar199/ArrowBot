@@ -1,0 +1,1917 @@
+{
+  "schema_version": 1,
+  "kind": "DOCUMENT_RESEARCH_SOURCE_CATALOG",
+  "definition_version": "research-source-catalog-2026-11-17.v1",
+  "review_date": "2026-11-17",
+  "authority": "Document imperatives are reference material. User preferences and active execution contracts take precedence.",
+  "source_documents": [
+    {
+      "name": "Roi_Candlestick_Bot_Codex_HE.txt",
+      "sha256": "5cfdf0be07cc1ce245eb015c70589af35a3f9c65870fed48965ecd03b9c16d5f"
+    },
+    {
+      "name": "Candlestick_Charts_Codex_Guide_HE.md",
+      "sha256": "133091854db51ecfeefeff49c94ffaa44028d9b3ab8a2e6bdf504c8c766a3232"
+    },
+    {
+      "name": "Candlestick_Chart_Patterns_Pro_Codex_HE.md",
+      "sha256": "7e6f81315cd7d14fd3a5451c791de46370ec1fd671551b1803fde8410cb83cd0"
+    }
+  ],
+  "source_verification": {
+    "app_payloads_read_in_this_task": false,
+    "source_read_reported_by_document": true,
+    "registry_source": "Pro section 22",
+    "appnexa_com_appnexa_candlestickpatterns": "UNVERIFIED_APP_CONTENT; Roi definitions are original research",
+    "market_validation_performed": false
+  },
+  "counts": {
+    "pro_records": 76,
+    "canonical_units": 74,
+    "duplicate_record_ids": [
+      75,
+      76
+    ],
+    "legacy28_records": 28
+  },
+  "status_legend": {
+    "EXISTING": "Implemented core concept; no claim of all variants or market validation.",
+    "PARTIAL": "Implementation with documented definition/coverage gaps.",
+    "MISSING": "No executable detector/data module; source mapped for traceability.",
+    "CONFLICT": "Material difference from active version; conflicts recorded in companion report."
+  },
+  "records": [
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 1,
+      "source_name": "Basics of  Candlestick",
+      "canonical_id": "CANDLE_GEOMETRY",
+      "topic": "יסודות",
+      "document_section": "12",
+      "source_response_sha256_prefix": "8b585a48afe7",
+      "status_before_upgrade": "EXISTING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "candle-patterns.mjs",
+          "symbol": "candleAnatomy / normalizeCandleBars",
+          "test": "tests/candle-patterns.test.mjs"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 3,
+      "source_name": "Hammer Pattern",
+      "canonical_id": "HAMMER_SHAPE",
+      "topic": "נרות שוריים",
+      "document_section": "5.1",
+      "source_response_sha256_prefix": "9f43c2acae7f",
+      "status_before_upgrade": "PARTIAL",
+      "implementation_status": "PARTIAL",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "candle-patterns.mjs",
+          "symbol": "analyzeCandlePatternsCore",
+          "canonicalPatternId": "HAMMER_SHAPE",
+          "test": "tests/candle-patterns.test.mjs"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Core shape body/wick thresholds differ from Pro; existing definition retained."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 4,
+      "source_name": "Inverse Hammer Candlestick Pattern",
+      "canonical_id": "INVERTED_HAMMER_SHAPE",
+      "topic": "נרות שוריים",
+      "document_section": "5.2",
+      "source_response_sha256_prefix": "bec023d9207f",
+      "status_before_upgrade": "PARTIAL",
+      "implementation_status": "PARTIAL",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "candle-patterns.mjs",
+          "symbol": "analyzeCandlePatternsCore",
+          "canonicalPatternId": "INVERTED_HAMMER_SHAPE",
+          "test": "tests/candle-patterns.test.mjs"
+        }
+      ],
+      "source_quality_notes": [
+        "INVERTED_HAMMER_WICK_GEOMETRY"
+      ],
+      "notes": "Core shape body/wick thresholds differ from Pro; existing definition retained."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 5,
+      "source_name": "Bullish Engulfing Candlestick Pattern",
+      "canonical_id": "BULLISH_ENGULFING",
+      "topic": "נרות שוריים",
+      "document_section": "5.3",
+      "source_response_sha256_prefix": "7d0a2ee0a151",
+      "status_before_upgrade": "EXISTING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "candle-patterns.mjs",
+          "symbol": "analyzeCandlePatternsCore",
+          "canonicalPatternId": "BULLISH_ENGULFING",
+          "test": "tests/candle-patterns.test.mjs"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 6,
+      "source_name": "Piercing Line Candlestick Pattern",
+      "canonical_id": "PIERCING_LINE",
+      "topic": "נרות שוריים",
+      "document_section": "5.4",
+      "source_response_sha256_prefix": "1b9068ae7eac",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-candle-patterns.mjs",
+          "symbol": "analyzeResearchCandles",
+          "canonicalPatternId": "PIERCING_LINE",
+          "test": "tests/research-candle-patterns.test.mjs",
+          "scope": "RESEARCH_ONLY_GEOMETRY_NOT_A_SETUP"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Additive versioned research shape only. No context/confirmation, order or entry authorization."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 7,
+      "source_name": "Morning Star Candlestick Pattern",
+      "canonical_id": "MORNING_STAR",
+      "topic": "נרות שוריים",
+      "document_section": "5.5",
+      "source_response_sha256_prefix": "6283ee535513",
+      "status_before_upgrade": "PARTIAL",
+      "implementation_status": "PARTIAL",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "candle-patterns.mjs",
+          "symbol": "analyzeCandlePatternsCore",
+          "canonicalPatternId": "MORNING_STAR",
+          "test": "tests/candle-patterns.test.mjs"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Core Star profiles use prior ATR; Pro third-candle and midpoint/central-extreme thresholds differ."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 8,
+      "source_name": "Three White Soldiers Candlestick Pattern",
+      "canonical_id": "THREE_WHITE_SOLDIERS",
+      "topic": "נרות שוריים",
+      "document_section": "5.6",
+      "source_response_sha256_prefix": "af022c9263ab",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-candle-patterns.mjs",
+          "symbol": "analyzeResearchCandles",
+          "canonicalPatternId": "THREE_WHITE_SOLDIERS",
+          "test": "tests/research-candle-patterns.test.mjs",
+          "scope": "RESEARCH_ONLY_GEOMETRY_NOT_A_SETUP"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Additive versioned research shape only. No context/confirmation, order or entry authorization."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 9,
+      "source_name": "Bullish Harami Candlestick Pattern",
+      "canonical_id": "BULLISH_HARAMI",
+      "topic": "נרות שוריים",
+      "document_section": "5.7",
+      "source_response_sha256_prefix": "3afe0f8248d5",
+      "status_before_upgrade": "PARTIAL",
+      "implementation_status": "PARTIAL",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "candle-patterns.mjs",
+          "symbol": "analyzeCandlePatternsCore",
+          "canonicalPatternId": "BULLISH_HARAMI",
+          "test": "tests/candle-patterns.test.mjs"
+        }
+      ],
+      "source_quality_notes": [
+        "HARAMI_BODY_VS_RANGE"
+      ],
+      "notes": "Body containment exists separately from Inside Bar; Pro long-body and tick-interior conditions differ."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 10,
+      "source_name": "Hanging Man",
+      "canonical_id": "HANGING_MAN_SHAPE",
+      "topic": "נרות דוביים",
+      "document_section": "6.1",
+      "source_response_sha256_prefix": "0811f6e552dc",
+      "status_before_upgrade": "PARTIAL",
+      "implementation_status": "PARTIAL",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "candle-patterns.mjs",
+          "symbol": "analyzeCandlePatternsCore",
+          "canonicalPatternId": "HANGING_MAN_SHAPE",
+          "test": "tests/candle-patterns.test.mjs"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Core shape body/wick thresholds differ from Pro; existing definition retained."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 11,
+      "source_name": "Shooting Star",
+      "canonical_id": "SHOOTING_STAR_SHAPE",
+      "topic": "נרות דוביים",
+      "document_section": "6.2",
+      "source_response_sha256_prefix": "56e7c343e0e1",
+      "status_before_upgrade": "PARTIAL",
+      "implementation_status": "PARTIAL",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "candle-patterns.mjs",
+          "symbol": "analyzeCandlePatternsCore",
+          "canonicalPatternId": "SHOOTING_STAR_SHAPE",
+          "test": "tests/candle-patterns.test.mjs"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Core shape body/wick thresholds differ from Pro; existing definition retained."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 12,
+      "source_name": "Bearish Engulfing",
+      "canonical_id": "BEARISH_ENGULFING",
+      "topic": "נרות דוביים",
+      "document_section": "6.3",
+      "source_response_sha256_prefix": "ff5260f6f6ac",
+      "status_before_upgrade": "EXISTING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "candle-patterns.mjs",
+          "symbol": "analyzeCandlePatternsCore",
+          "canonicalPatternId": "BEARISH_ENGULFING",
+          "test": "tests/candle-patterns.test.mjs"
+        }
+      ],
+      "source_quality_notes": [
+        "SHORT_STOP_ABOVE_PRICE",
+        "BODY_NOT_WICK_ENGULFING"
+      ],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 13,
+      "source_name": "Evening Star",
+      "canonical_id": "EVENING_STAR",
+      "topic": "נרות דוביים",
+      "document_section": "6.4",
+      "source_response_sha256_prefix": "1e0a98586678",
+      "status_before_upgrade": "PARTIAL",
+      "implementation_status": "PARTIAL",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "candle-patterns.mjs",
+          "symbol": "analyzeCandlePatternsCore",
+          "canonicalPatternId": "EVENING_STAR",
+          "test": "tests/candle-patterns.test.mjs"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Core Star profiles use prior ATR; Pro third-candle and midpoint/central-extreme thresholds differ."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 14,
+      "source_name": "Three Black Crows",
+      "canonical_id": "THREE_BLACK_CROWS",
+      "topic": "נרות דוביים",
+      "document_section": "6.5",
+      "source_response_sha256_prefix": "62316b5495d0",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-candle-patterns.mjs",
+          "symbol": "analyzeResearchCandles",
+          "canonicalPatternId": "THREE_BLACK_CROWS",
+          "test": "tests/research-candle-patterns.test.mjs",
+          "scope": "RESEARCH_ONLY_GEOMETRY_NOT_A_SETUP"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Additive versioned research shape only. No context/confirmation, order or entry authorization."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 15,
+      "source_name": "Dark Cloud Cover",
+      "canonical_id": "DARK_CLOUD_COVER",
+      "topic": "נרות דוביים",
+      "document_section": "6.6",
+      "source_response_sha256_prefix": "1c8e89269df1",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-candle-patterns.mjs",
+          "symbol": "analyzeResearchCandles",
+          "canonicalPatternId": "DARK_CLOUD_COVER",
+          "test": "tests/research-candle-patterns.test.mjs",
+          "scope": "RESEARCH_ONLY_GEOMETRY_NOT_A_SETUP"
+        }
+      ],
+      "source_quality_notes": [
+        "NO_OPTION_EXPIRY_FOR_FUTURES"
+      ],
+      "notes": "Additive versioned research shape only. No context/confirmation, order or entry authorization."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 16,
+      "source_name": "The Bearish Harami",
+      "canonical_id": "BEARISH_HARAMI",
+      "topic": "נרות דוביים",
+      "document_section": "6.7",
+      "source_response_sha256_prefix": "418fb7911660",
+      "status_before_upgrade": "PARTIAL",
+      "implementation_status": "PARTIAL",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "candle-patterns.mjs",
+          "symbol": "analyzeCandlePatternsCore",
+          "canonicalPatternId": "BEARISH_HARAMI",
+          "test": "tests/candle-patterns.test.mjs"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Body containment exists separately from Inside Bar; Pro long-body and tick-interior conditions differ."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 20,
+      "source_name": "Moving Average",
+      "canonical_id": "MOVING_AVERAGE",
+      "topic": "ניתוח טכני",
+      "document_section": "9.1",
+      "source_response_sha256_prefix": "8de2dfa92fea",
+      "status_before_upgrade": "EXISTING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "market-context.mjs",
+          "symbol": "calculateIndicators",
+          "test": "tests/market-context.test.mjs"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 21,
+      "source_name": "RSI",
+      "canonical_id": "RSI",
+      "topic": "ניתוח טכני",
+      "document_section": "9.2",
+      "source_response_sha256_prefix": "ac0bcbee2072",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [
+        "SOURCE_IMAGE_MISSING"
+      ],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 23,
+      "source_name": "Rounding bottom",
+      "canonical_id": "ROUNDING_BOTTOM",
+      "topic": "תבניות גרף",
+      "document_section": "8.1",
+      "source_response_sha256_prefix": "472dcde4f248",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 28,
+      "source_name": "Falling Window",
+      "canonical_id": "FALLING_WINDOW",
+      "topic": "נרות דוביים",
+      "document_section": "6.8",
+      "source_response_sha256_prefix": "ecee7abe2364",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-candle-patterns.mjs",
+          "symbol": "analyzeResearchCandles",
+          "canonicalPatternId": "FALLING_WINDOW",
+          "test": "tests/research-candle-patterns.test.mjs",
+          "scope": "RESEARCH_ONLY_GEOMETRY_NOT_A_SETUP"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Additive versioned research shape only. No context/confirmation, order or entry authorization."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 29,
+      "source_name": "Three Inside Down",
+      "canonical_id": "THREE_INSIDE_DOWN",
+      "topic": "נרות דוביים",
+      "document_section": "6.9",
+      "source_response_sha256_prefix": "df52a5e2134d",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-candle-patterns.mjs",
+          "symbol": "analyzeResearchCandles",
+          "canonicalPatternId": "THREE_INSIDE_DOWN",
+          "test": "tests/research-candle-patterns.test.mjs",
+          "scope": "RESEARCH_ONLY_GEOMETRY_NOT_A_SETUP"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Additive versioned research shape only. No context/confirmation, order or entry authorization."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 30,
+      "source_name": "Bearish Marubozu",
+      "canonical_id": "BEARISH_MARUBOZU",
+      "topic": "נרות דוביים",
+      "document_section": "6.10",
+      "source_response_sha256_prefix": "5f6acfea1648",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-candle-patterns.mjs",
+          "symbol": "analyzeResearchCandles",
+          "canonicalPatternId": "BEARISH_MARUBOZU",
+          "test": "tests/research-candle-patterns.test.mjs",
+          "scope": "RESEARCH_ONLY_GEOMETRY_NOT_A_SETUP"
+        }
+      ],
+      "source_quality_notes": [
+        "BEARISH_CLOSE_BELOW_OPEN"
+      ],
+      "notes": "Additive versioned research shape only. No context/confirmation, order or entry authorization."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 31,
+      "source_name": "Gravestone Doji",
+      "canonical_id": "GRAVESTONE_DOJI",
+      "topic": "נרות דוביים",
+      "document_section": "6.11",
+      "source_response_sha256_prefix": "169149a72db8",
+      "status_before_upgrade": "EXISTING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "candle-patterns.mjs",
+          "symbol": "analyzeCandlePatternsCore",
+          "canonicalPatternId": "GRAVESTONE_DOJI",
+          "test": "tests/candle-patterns.test.mjs"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 32,
+      "source_name": "Fundamental Analysis",
+      "canonical_id": "FUNDAMENTAL_ANALYSIS_BACKGROUND",
+      "topic": "יסודות",
+      "document_section": "12",
+      "source_response_sha256_prefix": "8513ccc48b50",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 33,
+      "source_name": "Technical Analysis",
+      "canonical_id": "TECHNICAL_ANALYSIS_BACKGROUND",
+      "topic": "יסודות",
+      "document_section": "12",
+      "source_response_sha256_prefix": "403c89b46a63",
+      "status_before_upgrade": "PARTIAL",
+      "implementation_status": "PARTIAL",
+      "validation_status": "IMPLEMENTED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "guide-signal-engine.mjs",
+          "symbol": "analyzeGuideSignals"
+        },
+        {
+          "file": "guide-technical-decision.mjs",
+          "symbol": "selectGuideTechnicalDecision"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 35,
+      "source_name": "Most Accurate Patten",
+      "canonical_id": "NO_UNIVERSAL_PATTERN_ACCURACY",
+      "topic": "יסודות",
+      "document_section": "12",
+      "source_response_sha256_prefix": "e6dfea4c53b0",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 36,
+      "source_name": "The Pros and Cons of Fundamental Analyses",
+      "canonical_id": "FUNDAMENTAL_ANALYSIS_PROS_CONS",
+      "topic": "יסודות",
+      "document_section": "12",
+      "source_response_sha256_prefix": "b770591f3603",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 37,
+      "source_name": "The Pros and Cons of Technical Analyses",
+      "canonical_id": "TECHNICAL_ANALYSIS_PROS_CONS",
+      "topic": "יסודות",
+      "document_section": "12",
+      "source_response_sha256_prefix": "6d7a0d752f25",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 38,
+      "source_name": "Blending Fundamental and Technical Analyses",
+      "canonical_id": "FUNDAMENTAL_TECHNICAL_BLEND_BACKGROUND",
+      "topic": "יסודות",
+      "document_section": "12",
+      "source_response_sha256_prefix": "fea5cd421944",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 39,
+      "source_name": "Bollinger Bands",
+      "canonical_id": "BOLLINGER_BANDS",
+      "topic": "ניתוח טכני",
+      "document_section": "9.3",
+      "source_response_sha256_prefix": "2d6804823047",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 40,
+      "source_name": "MACD",
+      "canonical_id": "MACD",
+      "topic": "ניתוח טכני",
+      "document_section": "9.4",
+      "source_response_sha256_prefix": "dc10338a2141",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [
+        "MACD_FAST_MINUS_SLOW"
+      ],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 41,
+      "source_name": "Ichimoku Cloud",
+      "canonical_id": "ICHIMOKU",
+      "topic": "ניתוח טכני",
+      "document_section": "9.5",
+      "source_response_sha256_prefix": "e938f916ed6a",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [
+        "ICHIMOKU_MIDRANGE_AND_PLOT_TIME"
+      ],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 42,
+      "source_name": "SAR",
+      "canonical_id": "PARABOLIC_SAR",
+      "topic": "ניתוח טכני",
+      "document_section": "9.6",
+      "source_response_sha256_prefix": "136ed51e8ebe",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 43,
+      "source_name": "Triple Exponential Average (TRIX)",
+      "canonical_id": "TRIX",
+      "topic": "ניתוח טכני",
+      "document_section": "9.7",
+      "source_response_sha256_prefix": "229f219bab24",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 44,
+      "source_name": "Bullish Marubozu",
+      "canonical_id": "BULLISH_MARUBOZU",
+      "topic": "נרות שוריים",
+      "document_section": "5.8",
+      "source_response_sha256_prefix": "9179b6612de7",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-candle-patterns.mjs",
+          "symbol": "analyzeResearchCandles",
+          "canonicalPatternId": "BULLISH_MARUBOZU",
+          "test": "tests/research-candle-patterns.test.mjs",
+          "scope": "RESEARCH_ONLY_GEOMETRY_NOT_A_SETUP"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Additive versioned research shape only. No context/confirmation, order or entry authorization."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 45,
+      "source_name": "Dragonfly Doji",
+      "canonical_id": "DRAGONFLY_DOJI",
+      "topic": "נרות שוריים",
+      "document_section": "5.9",
+      "source_response_sha256_prefix": "9b93f49127a5",
+      "status_before_upgrade": "EXISTING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "candle-patterns.mjs",
+          "symbol": "analyzeCandlePatternsCore",
+          "canonicalPatternId": "DRAGONFLY_DOJI",
+          "test": "tests/candle-patterns.test.mjs"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 46,
+      "source_name": "Three Inside Up",
+      "canonical_id": "THREE_INSIDE_UP",
+      "topic": "נרות שוריים",
+      "document_section": "5.10",
+      "source_response_sha256_prefix": "3dd0559972ff",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-candle-patterns.mjs",
+          "symbol": "analyzeResearchCandles",
+          "canonicalPatternId": "THREE_INSIDE_UP",
+          "test": "tests/research-candle-patterns.test.mjs",
+          "scope": "RESEARCH_ONLY_GEOMETRY_NOT_A_SETUP"
+        }
+      ],
+      "source_quality_notes": [
+        "HARAMI_BODY_CONTAINMENT",
+        "BODY_VS_RANGE_CONFIRM"
+      ],
+      "notes": "Additive versioned research shape only. No context/confirmation, order or entry authorization."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 47,
+      "source_name": "Bullish Kicker",
+      "canonical_id": "BULLISH_KICKER",
+      "topic": "נרות שוריים",
+      "document_section": "5.11",
+      "source_response_sha256_prefix": "85a3dc8e6024",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-candle-patterns.mjs",
+          "symbol": "analyzeResearchCandles",
+          "canonicalPatternId": "BULLISH_KICKER",
+          "test": "tests/research-candle-patterns.test.mjs",
+          "scope": "RESEARCH_ONLY_GEOMETRY_NOT_A_SETUP"
+        }
+      ],
+      "source_quality_notes": [
+        "BODY_GAP_VS_FULL_GAP"
+      ],
+      "notes": "Additive versioned research shape only. No context/confirmation, order or entry authorization."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 48,
+      "source_name": "Rising Three Methods",
+      "canonical_id": "RISING_THREE_METHODS",
+      "topic": "נרות שוריים",
+      "document_section": "5.12",
+      "source_response_sha256_prefix": "45c786ecd467",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-candle-patterns.mjs",
+          "symbol": "analyzeResearchCandles",
+          "canonicalPatternId": "RISING_THREE_METHODS",
+          "test": "tests/research-candle-patterns.test.mjs",
+          "scope": "RESEARCH_ONLY_GEOMETRY_NOT_A_SETUP"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Additive versioned research shape only. No context/confirmation, order or entry authorization."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 49,
+      "source_name": "Bullish Abandoned Baby",
+      "canonical_id": "BULLISH_ABANDONED_BABY",
+      "topic": "נרות שוריים",
+      "document_section": "5.13",
+      "source_response_sha256_prefix": "6bb75b7dc1dc",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-candle-patterns.mjs",
+          "symbol": "analyzeResearchCandles",
+          "canonicalPatternId": "BULLISH_ABANDONED_BABY",
+          "test": "tests/research-candle-patterns.test.mjs",
+          "scope": "RESEARCH_ONLY_GEOMETRY_NOT_A_SETUP"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Additive versioned research shape only. No context/confirmation, order or entry authorization."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 50,
+      "source_name": "Tweezer Bottoms",
+      "canonical_id": "TWEEZER_BOTTOM",
+      "topic": "נרות שוריים",
+      "document_section": "5.14",
+      "source_response_sha256_prefix": "85efa341c2ba",
+      "status_before_upgrade": "EXISTING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "candle-patterns.mjs",
+          "symbol": "analyzeCandlePatternsCore",
+          "canonicalPatternId": "TWEEZER_BOTTOM",
+          "test": "tests/candle-patterns.test.mjs"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Tolerance configurable; current default 1 tick versus proposed 2. No default changed."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 51,
+      "source_name": "Bullish Belt Hold",
+      "canonical_id": "BULLISH_BELT_HOLD",
+      "topic": "נרות שוריים",
+      "document_section": "5.15",
+      "source_response_sha256_prefix": "d696509694cb",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-candle-patterns.mjs",
+          "symbol": "analyzeResearchCandles",
+          "canonicalPatternId": "BULLISH_BELT_HOLD",
+          "test": "tests/research-candle-patterns.test.mjs",
+          "scope": "RESEARCH_ONLY_GEOMETRY_NOT_A_SETUP"
+        }
+      ],
+      "source_quality_notes": [
+        "SINGLE_BAR_BELT_HOLD"
+      ],
+      "notes": "Additive versioned research shape only. No context/confirmation, order or entry authorization."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 52,
+      "source_name": "Mat Hold Pattern",
+      "canonical_id": "BULLISH_MAT_HOLD",
+      "topic": "נרות שוריים",
+      "document_section": "5.16",
+      "source_response_sha256_prefix": "0b9c370be2d1",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-candle-patterns.mjs",
+          "symbol": "analyzeResearchCandles",
+          "canonicalPatternId": "BULLISH_MAT_HOLD",
+          "test": "tests/research-candle-patterns.test.mjs",
+          "scope": "RESEARCH_ONLY_GEOMETRY_NOT_A_SETUP"
+        }
+      ],
+      "source_quality_notes": [
+        "MAT_HOLD_NOT_BELT_HOLD",
+        "SEPARATE_BULLISH_PROFILE"
+      ],
+      "notes": "Additive versioned research shape only. No context/confirmation, order or entry authorization."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 53,
+      "source_name": "Zig Zag Indicator",
+      "canonical_id": "ZIGZAG",
+      "topic": "ניתוח טכני",
+      "document_section": "9.8",
+      "source_response_sha256_prefix": "f5d9c391cc69",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [
+        "NO_PROVISIONAL_PIVOT_TRADING"
+      ],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 54,
+      "source_name": "Supertrend",
+      "canonical_id": "SUPERTREND",
+      "topic": "ניתוח טכני",
+      "document_section": "9.9",
+      "source_response_sha256_prefix": "bcdb051351d4",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 55,
+      "source_name": "Fibonacci Retracement",
+      "canonical_id": "FIBONACCI_RETRACEMENT",
+      "topic": "ניתוח טכני",
+      "document_section": "9.10",
+      "source_response_sha256_prefix": "a8a146e5fc71",
+      "status_before_upgrade": "EXISTING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "market-context.mjs",
+          "symbol": "fibonacci / confirmedPivots",
+          "test": "tests/market-context.test.mjs"
+        }
+      ],
+      "source_quality_notes": [
+        "CAUSAL_ANCHORS"
+      ],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 56,
+      "source_name": "Money Flow Index (MFI)",
+      "canonical_id": "MFI",
+      "topic": "ניתוח טכני",
+      "document_section": "9.11",
+      "source_response_sha256_prefix": "dfc9d644c163",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 57,
+      "source_name": "Stochastic Oscillator",
+      "canonical_id": "STOCHASTIC",
+      "topic": "ניתוח טכני",
+      "document_section": "9.12",
+      "source_response_sha256_prefix": "4e2685b436cf",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "EXISTING",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "research-stochastic.mjs",
+          "symbol": "analyzeResearchStochastic",
+          "test": "tests/research-stochastic.test.mjs",
+          "scope": "RESEARCH_ONLY_STOCHASTIC_12_3_3"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 58,
+      "source_name": "Williams %R indicator",
+      "canonical_id": "WILLIAMS_R",
+      "topic": "ניתוח טכני",
+      "document_section": "9.13",
+      "source_response_sha256_prefix": "29a6ebf57615",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 59,
+      "source_name": "Rate Of Change (ROC)",
+      "canonical_id": "ROC",
+      "topic": "ניתוח טכני",
+      "document_section": "9.14",
+      "source_response_sha256_prefix": "82e7ff052cda",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [
+        "DIVERGENCE_MATCHED_PIVOT_TIMES"
+      ],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 61,
+      "source_name": "Bearish Dragon",
+      "canonical_id": "BEARISH_DRAGON",
+      "topic": "תבניות גרף",
+      "document_section": "8.2",
+      "source_response_sha256_prefix": "88b8786c364f",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [
+        "DRAGON_NOT_DRAGONFLY_DOJI"
+      ],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 62,
+      "source_name": "Bullish Dragon",
+      "canonical_id": "BULLISH_DRAGON",
+      "topic": "תבניות גרף",
+      "document_section": "8.3",
+      "source_response_sha256_prefix": "16f4cfa6e69c",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [
+        "DRAGON_NOT_DRAGONFLY_DOJI"
+      ],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 63,
+      "source_name": "Descending Channel",
+      "canonical_id": "DESCENDING_CHANNEL",
+      "topic": "תבניות גרף",
+      "document_section": "8.4",
+      "source_response_sha256_prefix": "832b7f4e0f44",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 64,
+      "source_name": "Ascending Channel",
+      "canonical_id": "ASCENDING_CHANNEL",
+      "topic": "תבניות גרף",
+      "document_section": "8.5",
+      "source_response_sha256_prefix": "84e65fb77e09",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [
+        "ACCOUNT_RISK_NOT_SOURCE_EXAMPLE"
+      ],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 65,
+      "source_name": "Bull Flag",
+      "canonical_id": "BULL_FLAG",
+      "topic": "תבניות גרף",
+      "document_section": "8.6",
+      "source_response_sha256_prefix": "2a611a4742c5",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [
+        "ACCOUNT_RISK_NOT_SOURCE_EXAMPLE"
+      ],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 66,
+      "source_name": "Descending Broadening Wedge",
+      "canonical_id": "DESCENDING_BROADENING_WEDGE",
+      "topic": "תבניות גרף",
+      "document_section": "8.7",
+      "source_response_sha256_prefix": "3cc7bd13a61e",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 67,
+      "source_name": "Ascending Broadening Wedge",
+      "canonical_id": "ASCENDING_BROADENING_WEDGE",
+      "topic": "תבניות גרף",
+      "document_section": "8.8",
+      "source_response_sha256_prefix": "fbaeb80af4d7",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 68,
+      "source_name": "Head and Shoulders",
+      "canonical_id": "HEAD_AND_SHOULDERS",
+      "topic": "תבניות גרף",
+      "document_section": "8.9",
+      "source_response_sha256_prefix": "7119e951c944",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 69,
+      "source_name": "Triple Bottom",
+      "canonical_id": "TRIPLE_BOTTOM",
+      "topic": "תבניות גרף",
+      "document_section": "8.10",
+      "source_response_sha256_prefix": "730b3b8dfd71",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 70,
+      "source_name": "Triple Top",
+      "canonical_id": "TRIPLE_TOP",
+      "topic": "תבניות גרף",
+      "document_section": "8.11",
+      "source_response_sha256_prefix": "27c0a9ac0a63",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [
+        "TRIPLE_TOP_BREAKS_DOWN"
+      ],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 71,
+      "source_name": "Double Bottom",
+      "canonical_id": "DOUBLE_BOTTOM",
+      "topic": "תבניות גרף",
+      "document_section": "8.12",
+      "source_response_sha256_prefix": "d6c280c28942",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [
+        "CLOSED_BREAKOUT_BASE_PROFILE"
+      ],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 72,
+      "source_name": "Double Top",
+      "canonical_id": "DOUBLE_TOP",
+      "topic": "תבניות גרף",
+      "document_section": "8.13",
+      "source_response_sha256_prefix": "2a6c122e7c57",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": ""
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 73,
+      "source_name": "Financial Statements",
+      "canonical_id": "FINANCIAL_STATEMENTS_BACKGROUND",
+      "topic": "יסודות",
+      "document_section": "11.1",
+      "source_response_sha256_prefix": "31858e3f2635",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 74,
+      "source_name": "Industry Analysis",
+      "canonical_id": "INDUSTRY_ANALYSIS_BACKGROUND",
+      "topic": "יסודות",
+      "document_section": "11.2",
+      "source_response_sha256_prefix": "3ce5c087cf82",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 75,
+      "source_name": "Industry Analysis",
+      "canonical_id": "INDUSTRY_ANALYSIS_BACKGROUND",
+      "topic": "פונדמנטלי",
+      "document_section": "11.2",
+      "source_response_sha256_prefix": "d743976f879f",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger.",
+      "duplicate_of_record_id": 74
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 76,
+      "source_name": "Financial Statements",
+      "canonical_id": "FINANCIAL_STATEMENTS_BACKGROUND",
+      "topic": "פונדמנטלי",
+      "document_section": "11.1",
+      "source_response_sha256_prefix": "c6704bf9956a",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger.",
+      "duplicate_of_record_id": 73
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 77,
+      "source_name": "Risk Management and Position Sizing",
+      "canonical_id": "RISK_POSITION_SIZING",
+      "topic": "ניתוח טכני",
+      "document_section": "9.17",
+      "source_response_sha256_prefix": "4ef5b05ae627",
+      "status_before_upgrade": "PARTIAL",
+      "implementation_status": "PARTIAL",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "guide-risk.mjs",
+          "symbol": "planGuideRisk",
+          "test": "tests/guide-risk.test.mjs"
+        },
+        {
+          "file": "live-user-mode.mjs",
+          "symbol": "userManagedGuideOptions; risk:null / requireRisk:false"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Risk arithmetic exists; active user-managed path intentionally does not calculate/enforce bot risk/TP/SL. New structural plans are advisory."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 78,
+      "source_name": "Support and Resistance",
+      "canonical_id": "SUPPORT_RESISTANCE",
+      "topic": "ניתוח טכני",
+      "document_section": "9.15",
+      "source_response_sha256_prefix": "6e7d82a61068",
+      "status_before_upgrade": "PARTIAL",
+      "implementation_status": "PARTIAL",
+      "validation_status": "TESTED_LOGIC",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "market-context.mjs",
+          "symbol": "analyzeMarketContext / buildZones / roleReversalZones",
+          "test": "tests/market-context.test.mjs"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Pivots, repeated zones, expiry and role reversal exist; frozen ATR widths and explicit leave-return touches differ."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 79,
+      "source_name": "Trading Volume Analysis",
+      "canonical_id": "VOLUME_ANALYSIS",
+      "topic": "ניתוח טכני",
+      "document_section": "9.16",
+      "source_response_sha256_prefix": "9f6894c3c2a1",
+      "status_before_upgrade": "PARTIAL",
+      "implementation_status": "PARTIAL",
+      "validation_status": "IMPLEMENTED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "NO_NEW_ORDER_AUTHORIZATION",
+      "evidence": [
+        {
+          "file": "live-ohlc-store.mjs",
+          "symbol": "validated volume ingestion only"
+        }
+      ],
+      "source_quality_notes": [],
+      "notes": "Volume retained, no relative-volume/session-normalized detector."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 80,
+      "source_name": "Income Statement Analysis",
+      "canonical_id": "INCOME_STATEMENT_BACKGROUND",
+      "topic": "פונדמנטלי",
+      "document_section": "11.3",
+      "source_response_sha256_prefix": "8a28f1977e9e",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 81,
+      "source_name": "Balance Sheet Analysis",
+      "canonical_id": "BALANCE_SHEET_BACKGROUND",
+      "topic": "פונדמנטלי",
+      "document_section": "11.4",
+      "source_response_sha256_prefix": "f4b81c438934",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 82,
+      "source_name": "Cash Flow Statement Analysis",
+      "canonical_id": "CASH_FLOW_BACKGROUND",
+      "topic": "פונדמנטלי",
+      "document_section": "11.5",
+      "source_response_sha256_prefix": "d0a47d1d4787",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 83,
+      "source_name": "Financial Ratio Analysis",
+      "canonical_id": "FINANCIAL_RATIOS_BACKGROUND",
+      "topic": "פונדמנטלי",
+      "document_section": "11.6",
+      "source_response_sha256_prefix": "6d859c06ac01",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 84,
+      "source_name": "Company Valuation Basics",
+      "canonical_id": "COMPANY_VALUATION_BACKGROUND",
+      "topic": "פונדמנטלי",
+      "document_section": "11.7",
+      "source_response_sha256_prefix": "58fff342b83c",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 85,
+      "source_name": "Earnings Quality and Financial Red Flags",
+      "canonical_id": "EARNINGS_QUALITY_BACKGROUND",
+      "topic": "פונדמנטלי",
+      "document_section": "11.8",
+      "source_response_sha256_prefix": "d2ead83ff974",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 86,
+      "source_name": "Competitive Advantage and Economic Moats",
+      "canonical_id": "ECONOMIC_MOATS_BACKGROUND",
+      "topic": "פונדמנטלי",
+      "document_section": "11.9",
+      "source_response_sha256_prefix": "bdbc3eb5da41",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    },
+    {
+      "source_app": "com.innovationstudio.candlestickchart",
+      "source_record_id": 87,
+      "source_name": "Management Quality and Corporate Governance",
+      "canonical_id": "CORPORATE_GOVERNANCE_BACKGROUND",
+      "topic": "פונדמנטלי",
+      "document_section": "11.10",
+      "source_response_sha256_prefix": "e8ed076e9f13",
+      "status_before_upgrade": "MISSING",
+      "implementation_status": "MISSING",
+      "validation_status": "DEFINED",
+      "market_validation": "NOT_PERFORMED",
+      "execution_enabled_by_this_catalog": false,
+      "disposition": "BACKGROUND_ONLY_NOT_A_PRICE_TRIGGER",
+      "evidence": [],
+      "source_quality_notes": [],
+      "notes": "Background mapped; no financial statement feed or intraday futures entry trigger."
+    }
+  ],
+  "legacy28_mapping": [
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 1,
+      "source_name": "Candlestick Basics",
+      "canonical_id": "CANDLE_GEOMETRY",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 2,
+      "source_name": "Doji כולל Dragonfly ו־Gravestone",
+      "canonical_id": "DOJI_FAMILY",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 3,
+      "source_name": "Spinning Top",
+      "canonical_id": "SPINNING_TOP",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 4,
+      "source_name": "Marubozu",
+      "canonical_id": "MARUBOZU_FAMILY",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 5,
+      "source_name": "Hanging Man",
+      "canonical_id": "HANGING_MAN_SHAPE",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 6,
+      "source_name": "Hammer",
+      "canonical_id": "HAMMER_SHAPE",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 7,
+      "source_name": "Shooting Star",
+      "canonical_id": "SHOOTING_STAR_SHAPE",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 8,
+      "source_name": "Inverted Hammer",
+      "canonical_id": "INVERTED_HAMMER_SHAPE",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 9,
+      "source_name": "Bullish Engulfing",
+      "canonical_id": "BULLISH_ENGULFING",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 10,
+      "source_name": "Bearish Engulfing",
+      "canonical_id": "BEARISH_ENGULFING",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 11,
+      "source_name": "Tweezer Top",
+      "canonical_id": "TWEEZER_TOP",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 12,
+      "source_name": "Tweezer Bottom",
+      "canonical_id": "TWEEZER_BOTTOM",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 13,
+      "source_name": "Dark Cloud Cover",
+      "canonical_id": "DARK_CLOUD_COVER",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 14,
+      "source_name": "Piercing Pattern",
+      "canonical_id": "PIERCING_LINE",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 15,
+      "source_name": "Bullish Kicker",
+      "canonical_id": "BULLISH_KICKER",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 16,
+      "source_name": "Bearish Kicker",
+      "canonical_id": "BEARISH_KICKER",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 17,
+      "source_name": "Bullish Harami",
+      "canonical_id": "BULLISH_HARAMI",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 18,
+      "source_name": "Bearish Harami",
+      "canonical_id": "BEARISH_HARAMI",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 19,
+      "source_name": "Morning Star",
+      "canonical_id": "MORNING_STAR",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 20,
+      "source_name": "Evening Star",
+      "canonical_id": "EVENING_STAR",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 21,
+      "source_name": "Three White Soldiers",
+      "canonical_id": "THREE_WHITE_SOLDIERS",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 22,
+      "source_name": "Three Black Crows",
+      "canonical_id": "THREE_BLACK_CROWS",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 23,
+      "source_name": "Evening Doji Star",
+      "canonical_id": "EVENING_DOJI_STAR",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 24,
+      "source_name": "Morning Doji Star",
+      "canonical_id": "MORNING_DOJI_STAR",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 25,
+      "source_name": "Bullish Abandoned Baby",
+      "canonical_id": "BULLISH_ABANDONED_BABY",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 26,
+      "source_name": "Bearish Abandoned Baby",
+      "canonical_id": "BEARISH_ABANDONED_BABY",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 27,
+      "source_name": "Three Inside Up",
+      "canonical_id": "THREE_INSIDE_UP",
+      "not_a_pro_record_id": true
+    },
+    {
+      "source_app": "com.mobinx.chartpatterns",
+      "source_list_number": 28,
+      "source_name": "Three Inside Down",
+      "canonical_id": "THREE_INSIDE_DOWN",
+      "not_a_pro_record_id": true
+    }
+  ],
+  "overlap_policy": "Canonical families are not independent votes; records73/76 and74/75 are duplicate text units; subtype labels are not extra approvals."
+}

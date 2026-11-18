@@ -1,0 +1,267 @@
+//@version=6
+indicator("Arrow OHLC Bridge v1", overlay = true, dynamic_requests = true, calc_bars_count = 102)
+
+// Bound only the raw series that are actually history-indexed. A global
+// max_bars_back also allocates history for large serialized JSON strings.
+max_bars_back(time, 102)
+max_bars_back(time_close, 102)
+max_bars_back(open, 102)
+max_bars_back(high, 102)
+max_bars_back(low, 102)
+max_bars_back(close, 102)
+max_bars_back(volume, 102)
+bool confirmedSeries = barstate.isconfirmed
+max_bars_back(confirmedSeries, 102)
+
+// Save this as a PERSONAL indicator and keep its Pine Logs pane open.
+// This bridge never creates alerts, orders or a network connection.
+// Pine realtime execution does not verify an exchange data subscription/delay.
+int historyCount = input.int(100, "Closed warmup bars", minval = 20, maxval = 100)
+// Observed updates are bounded; zero is available for each changed execution.
+// Provider delivery and Pine/DOM scheduling can still coalesce exchange ticks.
+int updateEveryMs = input.int(50, "Changed intrabar log interval (ms; 0 = each change)", minval = 0, maxval = 5000)
+int recoveryEveryMs = input.int(10000, "Recovery snapshot interval (ms)", minval = 5000, maxval = 60000, step = 1000)
+int logBudgetChars = input.int(1000000, "Session logged-character budget (restart when exhausted)", minval = 100000, maxval = 10000000, step = 100000)
+int heartbeatMs = 1000
+int logReserveChars = 4096
+string higherOne = input.timeframe("5", "Confirmed higher timeframe 1")
+string higherTwo = input.timeframe("15", "Confirmed higher timeframe 2")
+string marker = "ARROW_OHLC_V1 "
+var string runId = syminfo.tickerid + "|" + timeframe.period + "|" + str.tostring(timenow, "#")
+varip int sequence = 0
+varip int lastLoggedAt = na
+varip int lastRecoveryAt = na
+varip int lastHigherOneAt = na
+varip int lastHigherTwoAt = na
+varip int emittedChars = 0
+varip bool logBudgetExhausted = false
+varip float lastOpen = na
+varip float lastHigh = na
+varip float lastLow = na
+varip float lastClose = na
+varip float lastVolume = na
+varip int lastBarTime = na
+
+q(string value) =>
+    '"' + str.replace_all(str.replace_all(value, "\\", "\\\\"), '"', '\\"') + '"'
+
+n(float value) =>
+    na(value) ? "null" : str.tostring(value, "#.################")
+
+b(bool value) =>
+    value ? "true" : "false"
+
+valuesJson(int openedAt, int closedAt, float opened, float highest, float lowest, float last, float tradedVolume, bool isClosed) =>
+    '{"time":' + n(openedAt) + ',"closeTime":' + n(closedAt) + ',"open":' + n(opened) + ',"high":' + n(highest) + ',"low":' + n(lowest) + ',"close":' + n(last) + ',"volume":' + n(tradedVolume) + ',"closed":' + b(isClosed) + ',"sourceClosed":' + b(isClosed) + '}'
+
+barJson(int offset, bool isClosed) =>
+    valuesJson(time[offset], time_close[offset], open[offset], high[offset], low[offset], close[offset], volume[offset], isClosed)
+
+metaJson(float durationMs) =>
+    // Futures can encode settlement/session modifiers inside tickerid. Match
+    // the chart's exchange-qualified symbol; preserve the full ID in runId.
+    '{"source":"ohlc","instrument":' + q(ticker.standard(syminfo.tickerid)) + ',"timeframe":' + q(timeframe.period) + ',"timeframeMs":' + n(durationMs) + ',"tickSize":' + n(syminfo.mintick) + ',"pointValue":' + n(syminfo.pointvalue) + ',"currency":' + q(syminfo.currency) + ',"timezone":' + q(syminfo.timezone) + ',"session":' + q(syminfo.session) + ',"chartType":' + q(chart.is_standard ? "standard" : "nonstandard") + '}'
+
+packetJson(string kind, int number, float durationMs, string barsJson, string reasonsJson) =>
+    '{"schemaVersion":1,"kind":' + q(kind) + ',"runId":' + q(runId) + ',"sequence":' + n(number) + ',"sourceEmittedAt":' + n(timenow) + ',"realtime":' + b(barstate.isrealtime) + ',"dataDelayUnverified":true,"metadata":' + metaJson(durationMs) + ',"bars":[' + barsJson + '],"reasonCodes":[' + reasonsJson + ']}'
+
+// Pine has no documented clear-logs command: realtime messages append. Limit
+// this producer's cumulative payload characters, reserve a final diagnostic,
+// then stop all logs and requested collections until the indicator restarts.
+// This is a payload/session bound, not a claim about Pine's heap allocator.
+emitPayload(string payload, int usedChars, bool exhausted, int number, float durationMs) =>
+    int nextUsed = usedChars
+    bool nextExhausted = exhausted
+    if not exhausted
+        int needed = str.length(marker) + str.length(payload)
+        if needed <= 40020 and usedChars + needed <= logBudgetChars - logReserveChars
+            log.info("{0}", marker + payload)
+            nextUsed += needed
+        else
+            string reason = usedChars + needed > logBudgetChars - logReserveChars ? "SOURCE_LOG_BUDGET_EXHAUSTED" : "SNAPSHOT_SIZE_LIMIT"
+            string diagnostic = marker + packetJson("blocked", number, durationMs, "", q(reason) + "," + q("SOURCE_LOG_BUDGET_CHARS:" + str.tostring(logBudgetChars)) + "," + q("SOURCE_LOG_EMITTED_CHARS:" + str.tostring(usedChars)))
+            log.info("{0}", diagnostic)
+            nextUsed += str.length(diagnostic)
+            nextExhausted := true
+    [nextUsed, nextExhausted]
+
+fixedDuration(string tf) =>
+    bool seconds = str.endswith(tf, "S")
+    float count = str.tonumber(seconds ? str.substring(tf, 0, str.length(tf) - 1) : tf)
+    not na(count) and count > 0 ? count * (seconds ? 1000 : 60000) : na
+
+higherPacketJson(string kind, int number, float baseDuration, string tf, float higherDuration, string rows, string reasons) =>
+    string base = packetJson(kind, number, baseDuration, "", "")
+    str.substring(base, 0, str.length(base) - 1) + ',"higherTimeframes":[{"timeframe":' + q(tf) + ',"timeframeMs":' + n(higherDuration) + ',"bars":[' + rows + '],"reasonCodes":[' + reasons + ']}]}'
+
+// The requested context retains at most100x7 numeric values. Return its
+// collection ONLY on its last bar, and na elsewhere, following TradingView's
+// latest-state memory guidance. No historical JSON/string arrays are retained.
+// Each OHLCV/time reference below has offset>=1: the matrix contains only
+// provider-confirmed past bars, never the evolving requested candle.
+confirmedHigherData(float desiredDuration) =>
+    varip matrix<float> cached = na
+    varip int cachedOpen = na
+    varip int count = 0
+    varip bool trimmed = false
+    if barstate.islast and (na(cachedOpen) or cachedOpen != time)
+        if na(cached)
+            cached := matrix.new<float>(historyCount, 7, na)
+        int available = math.min(historyCount, bar_index)
+        count := 0
+        if available > 0
+            for offset = 1 to available
+                bool valid = not na(time_close[offset]) and time_close[offset] - time[offset] == desiredDuration and not na(open[offset]) and not na(high[offset]) and not na(low[offset]) and not na(close[offset])
+                if not valid or offset > 1 and time_close[offset] != time[offset - 1]
+                    break
+                count += 1
+        trimmed := count < available
+        if count > 0
+            for row = 0 to count - 1
+                int offset = count - row
+                matrix.set(cached, row, 0, time[offset])
+                matrix.set(cached, row, 1, time_close[offset])
+                matrix.set(cached, row, 2, open[offset])
+                matrix.set(cached, row, 3, high[offset])
+                matrix.set(cached, row, 4, low[offset])
+                matrix.set(cached, row, 5, close[offset])
+                matrix.set(cached, row, 6, volume[offset])
+        cachedOpen := time
+    [barstate.islast ? cached : na, barstate.islast ? count : 0, barstate.islast and trimmed]
+
+matrixBarJson(matrix<float> data, int row) =>
+    valuesJson(int(matrix.get(data, row, 0)), int(matrix.get(data, row, 1)), matrix.get(data, row, 2), matrix.get(data, row, 3), matrix.get(data, row, 4), matrix.get(data, row, 5), matrix.get(data, row, 6), true)
+
+matrixRowsJson(matrix<float> data, int count) =>
+    array<string> fragments = array.new<string>(0)
+    if not na(data) and count > 0
+        for row = 0 to count - 1
+            array.push(fragments, matrixBarJson(data, row))
+    array.join(fragments, ",")
+
+higherHistoryReasons(int count, bool wasTrimmed) =>
+    count == 0 ? q("HIGHER_TIMEFRAME_WARMUP") : wasTrimmed ? q("WARMUP_TRIMMED_AT_GAP") : count < historyCount ? q("HIGHER_TIMEFRAME_PARTIAL_WARMUP") : ""
+
+// Restrict to ordinary, fixed-time candles. Calendar/price/tick charts and
+// shortened session bars must not silently acquire an invented close time.
+bool supportedTimeframe = timeframe.isseconds or timeframe.isminutes
+float durationMs = supportedTimeframe ? timeframe.in_seconds() * 1000 : na
+bool sourceSupported = chart.is_standard and supportedTimeframe and not na(time_close) and time_close - time == durationMs
+float higherOneDuration = fixedDuration(higherOne)
+float higherTwoDuration = fixedDuration(higherTwo)
+bool higherOneSupported = not na(higherOneDuration) and higherOneDuration > durationMs
+bool higherTwoSupported = not na(higherTwoDuration) and higherTwoDuration > durationMs and higherTwo != higherOne
+// Every requested field has [1] plus lookahead_on: only provider-confirmed
+// past HTF bars can be observed, both historically and in realtime. Do not use
+// barstate.isconfirmed inside request.security (unsupported by TradingView).
+// The same raw ticker keeps provider session/settlement modifiers intact.
+matrix<float> higherOneData = na
+matrix<float> higherTwoData = na
+int higherOneCount = 0
+int higherTwoCount = 0
+bool higherOneTrimmed = false
+bool higherTwoTrimmed = false
+if not logBudgetExhausted
+    [oneData, oneCount, oneTrimmed] = request.security(syminfo.tickerid, higherOneSupported ? higherOne : supportedTimeframe ? timeframe.period : "1", confirmedHigherData(higherOneDuration), lookahead = barmerge.lookahead_on, calc_bars_count = historyCount + 2)
+    [twoData, twoCount, twoTrimmed] = request.security(syminfo.tickerid, higherTwoSupported ? higherTwo : supportedTimeframe ? timeframe.period : "1", confirmedHigherData(higherTwoDuration), lookahead = barmerge.lookahead_on, calc_bars_count = historyCount + 2)
+    higherOneData := oneData
+    higherTwoData := twoData
+    higherOneCount := oneCount
+    higherTwoCount := twoCount
+    higherOneTrimmed := oneTrimmed
+    higherTwoTrimmed := twoTrimmed
+int higherOneClose = not na(higherOneData) and higherOneCount > 0 ? int(matrix.get(higherOneData, higherOneCount - 1, 1)) : na
+int higherTwoClose = not na(higherTwoData) and higherTwoCount > 0 ? int(matrix.get(higherTwoData, higherTwoCount - 1, 1)) : na
+bool snapshotNow = barstate.islastconfirmedhistory
+bool recoveryNow = barstate.isrealtime and (na(lastRecoveryAt) or timenow - lastRecoveryAt >= recoveryEveryMs)
+bool volumeChanged = na(volume) != na(lastVolume) or not na(volume) and volume != lastVolume
+bool changed = na(lastBarTime) or time != lastBarTime or open != lastOpen or high != lastHigh or low != lastLow or close != lastClose or volumeChanged
+bool updateNow = barstate.isrealtime and (barstate.isnew or barstate.isconfirmed or na(lastLoggedAt) or timenow - lastLoggedAt >= heartbeatMs or changed and timenow - lastLoggedAt >= updateEveryMs)
+
+if not logBudgetExhausted and (snapshotNow or recoveryNow or updateNow)
+    if not sourceSupported
+        sequence += 1
+        string reason = not chart.is_standard ? "NONSTANDARD_CHART" : not supportedTimeframe ? "UNSUPPORTED_TIMEFRAME" : "UNVERIFIED_BAR_TIMES"
+        [usedBlocked, exhaustedBlocked] = emitPayload(packetJson("blocked", sequence, durationMs, "", q(reason)), emittedChars, logBudgetExhausted, sequence, durationMs)
+        emittedChars := usedBlocked
+        logBudgetExhausted := exhaustedBlocked
+        lastLoggedAt := timenow
+        lastRecoveryAt := timenow
+    else
+        if snapshotNow or recoveryNow
+            sequence += 1
+            int firstOffset = barstate.isconfirmed ? 0 : 1
+            int available = math.min(historyCount, bar_index + 1 - firstOffset)
+            int count = available > 0 ? 1 : 0
+            // A gap may be a market closure OR missing data. Do not invent its
+            // cause: warm up only from the contiguous closed suffix after it.
+            if available > 1
+                for relative = 1 to available - 1
+                    int offset = firstOffset + relative
+                    if time_close[offset] != time[offset - 1] or na(time_close[offset]) or time_close[offset] - time[offset] != durationMs
+                        break
+                    count += 1
+            array<string> fragments = array.new<string>(0)
+            bool validHistory = count > 0
+            if count > 0
+                for offset = firstOffset + count - 1 to firstOffset
+                    if na(time_close[offset]) or time_close[offset] - time[offset] != durationMs or not confirmedSeries[offset]
+                        validHistory := false
+                    array.push(fragments, barJson(offset, true))
+            string rows = array.join(fragments, ",")
+            string reasons = not validHistory ? q("UNVERIFIED_HISTORY_TIMES") : count < available ? q("WARMUP_TRIMMED_AT_GAP") : ""
+            string payload = packetJson(validHistory ? "snapshot" : "blocked", sequence, durationMs, validHistory ? rows : "", reasons)
+            [usedBase, exhaustedBase] = emitPayload(payload, emittedChars, logBudgetExhausted, sequence, durationMs)
+            emittedChars := usedBase
+            logBudgetExhausted := exhaustedBase
+            lastRecoveryAt := timenow
+            // Separate envelopes keep each <=100-bar provider warmup below
+            // Pine's log-size limit. They carry base metadata for chart proof.
+            if not logBudgetExhausted
+                sequence += 1
+                string oneReason = not higherOneSupported ? q("HIGHER_TIMEFRAME_MUST_EXCEED_BASE") : higherHistoryReasons(higherOneCount, higherOneTrimmed)
+                string onePayload = higherPacketJson("timeframe_snapshot", sequence, durationMs, higherOne, higherOneDuration, higherOneSupported ? matrixRowsJson(higherOneData, higherOneCount) : "", oneReason)
+                [usedOne, exhaustedOne] = emitPayload(onePayload, emittedChars, logBudgetExhausted, sequence, durationMs)
+                emittedChars := usedOne
+                logBudgetExhausted := exhaustedOne
+            if not logBudgetExhausted
+                sequence += 1
+                string twoReason = higherTwo == higherOne ? q("DUPLICATE_HIGHER_TIMEFRAME") : not higherTwoSupported ? q("HIGHER_TIMEFRAME_MUST_EXCEED_BASE") : higherHistoryReasons(higherTwoCount, higherTwoTrimmed)
+                string twoPayload = higherPacketJson("timeframe_snapshot", sequence, durationMs, higherTwo, higherTwoDuration, higherTwoSupported ? matrixRowsJson(higherTwoData, higherTwoCount) : "", twoReason)
+                [usedTwo, exhaustedTwo] = emitPayload(twoPayload, emittedChars, logBudgetExhausted, sequence, durationMs)
+                emittedChars := usedTwo
+                logBudgetExhausted := exhaustedTwo
+            lastHigherOneAt := higherOneClose
+            lastHigherTwoAt := higherTwoClose
+        // Recovery snapshots are nonactionable history. They do not suppress
+        // the current realtime update emitted in this same script execution.
+        if updateNow and not logBudgetExhausted
+            sequence += 1
+            // Repeat the last final bar on every observed execution: a missed
+            // first DOM log after a boundary cannot strand its final OHLC.
+            bool previousFinal = bar_index > 0 and confirmedSeries[1]
+            string rows = (previousFinal ? barJson(1, true) + "," : "") + barJson(0, barstate.isconfirmed)
+            [usedUpdate, exhaustedUpdate] = emitPayload(packetJson("update", sequence, durationMs, rows, ""), emittedChars, logBudgetExhausted, sequence, durationMs)
+            emittedChars := usedUpdate
+            logBudgetExhausted := exhaustedUpdate
+            lastLoggedAt := timenow
+            lastBarTime := time
+            lastOpen := open
+            lastHigh := high
+            lastLow := low
+            lastClose := close
+            lastVolume := volume
+        if not logBudgetExhausted and barstate.isrealtime and higherOneSupported and not na(higherOneData) and higherOneCount > 0 and not na(higherOneClose) and (na(lastHigherOneAt) or higherOneClose != lastHigherOneAt)
+            sequence += 1
+            [usedHigherOne, exhaustedHigherOne] = emitPayload(higherPacketJson("timeframe_update", sequence, durationMs, higherOne, higherOneDuration, matrixBarJson(higherOneData, higherOneCount - 1), ""), emittedChars, logBudgetExhausted, sequence, durationMs)
+            emittedChars := usedHigherOne
+            logBudgetExhausted := exhaustedHigherOne
+            lastHigherOneAt := higherOneClose
+        if not logBudgetExhausted and barstate.isrealtime and higherTwoSupported and not na(higherTwoData) and higherTwoCount > 0 and not na(higherTwoClose) and (na(lastHigherTwoAt) or higherTwoClose != lastHigherTwoAt)
+            sequence += 1
+            [usedHigherTwo, exhaustedHigherTwo] = emitPayload(higherPacketJson("timeframe_update", sequence, durationMs, higherTwo, higherTwoDuration, matrixBarJson(higherTwoData, higherTwoCount - 1), ""), emittedChars, logBudgetExhausted, sequence, durationMs)
+            emittedChars := usedHigherTwo
+            logBudgetExhausted := exhaustedHigherTwo
+            lastHigherTwoAt := higherTwoClose
+
+plot(na, "Bridge only", display = display.none)

@@ -1,0 +1,24 @@
+// Synthetic component-contract fixture, not a market record or a claim that
+// the full pattern engine approved all mandatory filters on actual prices.
+// It exercises production freshness selection and risk arithmetic only.
+import {planGuideRisk} from '../../guide-risk.mjs';
+export function makeTradovateDemoIntentFixture({direction='LONG',stopTicks=37,continuous=false}={}){
+  const now=Date.UTC(2026,10,16,15,31,1),minute=60000,closeTime=now-1000,entry=20000,stop=entry+(direction==='LONG'?-1:1)*stopTicks*.25;
+  const instrument=continuous?'CME_MINI:NQ1!':'CME_MINI:NQZ2026',runId=instrument+'|1|synthetic-component-contract',sessionId='synthetic-component-session',reviewId='local-review-synthetic-component';
+  const risk={riskBudget:200,pointValue:20,maxContracts:1,commissionPerContract:3.1,slippageTicks:2,rewardRisk:2};
+  const profile={schemaVersion:1,id:'independent-demo-component',label:'Independent demo fixture',brokerLabel:'Tradovate independent demo',mode:'RESEARCH',instrument,currency:'USD',tickSize:.25,...risk,costBasis:'USER_SPECIFIED'};
+  const bar=(index,close)=>({time:closeTime-(3-index)*minute,closeTime:closeTime-(2-index)*minute,open:close,high:close+.25,low:close-.25,close,closed:true,finalOhlcVerified:true,knownAt:closeTime-(2-index)*minute});
+  const bars=[bar(0,19999),bar(1,19999.5),bar(2,entry)],ids=['STRUCTURE','KNOWN_LOCATION','EMA','FIB','TRENDLINE','SUPPLY_DEMAND','HIGHER_TIMEFRAME'];
+  const signal={eventId:'synthetic-component-event',status:'CONFIRMED',direction,instrument,timeframe:'1',formationStartTime:bars[1].time,detectedAt:bars[1].knownAt,confirmedAt:bars[2].knownAt,confirmationBarCloseTime:bars[2].closeTime,confirmationClose:entry,confirmationIndex:2,signalIndex:1,signalStartIndex:1,invalidation:stop,confirmationPolicy:'later_close_beyond_setup',execution:'OBSERVATION_ONLY',orderEligible:false,
+    contextSnapshot:{passed:true,checks:ids.map(id=>({id,required:true,enabled:true,available:true,passed:true,state:'PASS'}))},
+    parameterSnapshot:{config:Object.fromEntries(['requireRisk','requireLocation','requireHigherTimeframe','requireEma','requireFib','requireTrendline','requireSupplyDemand'].map(key=>[key,true])),contextConfig:{roleReversalEnabled:true,supplyDemandEnabled:true},risk},riskPlan:planGuideRisk({...risk,direction,entry,stop,tickSize:.25})};
+  const current={time:closeTime,closeTime:closeTime+minute,open:entry,high:entry+.25,low:entry-.25,close:entry,closed:false};
+  const state={status:'READY',ready:true,liveEligible:true,stale:false,requiresSnapshot:false,contextOnly:false,bootstrap:false,connected:true,generation:4,lastReceivedAt:now-50,metadata:{source:'ohlc',sourceId:runId,tabId:17,instrument,timeframe:'1',timeframeMs:minute,currency:'USD',tickSize:.25,pointValue:20,chartType:'standard',realtime:true,replay:false},current,bars,newlyClosed:[bars[2]],bootstrapAsOfTime:bars[1].time,eligibleCloseTimes:[bars[2].closeTime],decisionAsOfTime:closeTime};
+  const alert={id:runId+':'+signal.eventId,sessionId,runId,sourceTabId:17,receivedAt:now-50,approvedAtReceiverEpoch:now-40,sourcePacketId:runId+':73',accountReview:{reviewId,reviewedAt:now-4*minute,profile,brokerAccountVerified:false,commissionVerified:false,slippageVerified:false,ordersAuthorized:false},signal};
+  const brokerBinding={provider:'TRADOVATE_INDEPENDENT_DEMO',environment:'DEMO',accountOrigin:'INDEPENDENT_DEMO',accountId:123,verified:true,automationConsent:true,costsReviewed:true,localReviewId:reviewId,independentAccountEvidence:{kind:'BROKER_VERIFIED_INDEPENDENT_DEMO',accountId:123,observedAt:now-100,reference:'synthetic-component-account-evidence'}};
+  const brokerSnapshot={provider:'TRADOVATE_INDEPENDENT_DEMO',environment:'DEMO',accountOrigin:'INDEPENDENT_DEMO',accountId:123,accountSpec:'IndependentDemoFixture',verified:true,tradingEnabled:true,observedAt:now-100,positions:[],workingOrders:[]};
+  const contract={id:456,verified:true,observedAt:now-100,product:'NQ',instrument:'CME_MINI:NQZ2026',symbol:'NQZ6',tickSize:.25,pointValue:20,currency:'USD',expirationTime:Date.UTC(2026,11,18,14,30)};
+  if(continuous)brokerBinding.continuousMapping={verified:true,priceBasisVerified:true,sourceInstrument:instrument,datedInstrument:contract.instrument,contractId:contract.id,observedAt:now-100,reference:'synthetic-component-roll-evidence'};
+  const quote={verified:true,environment:'DEMO',contractId:contract.id,instrument:contract.instrument,observedAt:now-100,bid:entry,ask:entry+.25,last:entry};
+  return {simulationOnly:true,fixtureScope:'SYNTHETIC_COMPONENT_CONTRACT_NOT_MARKET_OR_FULL_ENGINE_APPROVAL',now,alert,state,analysis:{asOfTime:closeTime,events:[structuredClone(signal)],signals:[structuredClone(signal)]},source:{active:true,settingsDirty:false,mode:'LIVE',sessionId,runId,sourceTabId:17,generation:4,accountReviewId:reviewId},brokerBinding,brokerSnapshot,contract,quote};
+}

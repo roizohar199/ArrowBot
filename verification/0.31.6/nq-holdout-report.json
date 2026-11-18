@@ -1,0 +1,779 @@
+{
+  "kind": "ARROW_NQ_HOLDOUT_V1",
+  "instrument": "CME E-mini NQ",
+  "timeframe": 1,
+  "researchOnly": true,
+  "developmentWindow": {
+    "from": "2026-11-13",
+    "to": "2026-11-17"
+  },
+  "definitions": {
+    "candles": "research-candles-2026-11-17.v2",
+    "chart": "chart-structures-v1",
+    "indicators": "indicators-and-volume-v1"
+  },
+  "familySize": 12,
+  "primary": {
+    "source": "AlfordLabs",
+    "url": "https://github.com/kfccolonel1/BARS#raw",
+    "sha256": "a6fdb229a7ed91be82a381d5bddc73fb8e0b49526ed19a1f3b4865dc68d19527",
+    "from": "2026-08-03",
+    "to": "2026-09-04",
+    "warmupSessions": 15,
+    "sessions": 25,
+    "bars": 34500,
+    "volumeBars": 34500,
+    "vwapBars": 34500,
+    "rvolBars": 34500,
+    "reports": [
+      {
+        "horizon": 15,
+        "patterns": [
+          {
+            "id": "ADVANCE_BLOCK",
+            "total": 81,
+            "covered": 81,
+            "n": 73,
+            "controls": null,
+            "sessions": 23,
+            "meanPoints": 0.26499045584818465,
+            "hitDelta": 0.028848308565959872,
+            "hitRate": 0.4657534246575342,
+            "baselineRate": 0.43690511609157445,
+            "interval": [
+              -10.288300961532938,
+              9.423997231054118
+            ],
+            "finding": "INCONCLUSIVE"
+          },
+          {
+            "id": "BEARISH_BELT_HOLD",
+            "total": 1392,
+            "covered": 1392,
+            "n": 1187,
+            "controls": null,
+            "sessions": 25,
+            "meanPoints": -1.4498212684100704,
+            "hitDelta": -0.027590793059616824,
+            "hitRate": 0.4650379106992418,
+            "baselineRate": 0.4926287037588587,
+            "interval": [
+              -3.4345537517518694,
+              0.48078375194037737
+            ],
+            "finding": "INCONCLUSIVE"
+          },
+          {
+            "id": "DOUBLE_TOP",
+            "total": 164,
+            "covered": 164,
+            "n": 146,
+            "controls": null,
+            "sessions": 25,
+            "meanPoints": 4.344064509437895,
+            "hitDelta": 0.011072280167396593,
+            "hitRate": 0.5205479452054794,
+            "baselineRate": 0.5094756650380828,
+            "interval": [
+              -2.0653364436594073,
+              11.6393875868945
+            ],
+            "finding": "INCONCLUSIVE"
+          },
+          {
+            "id": "DOUBLE_BOTTOM",
+            "total": 150,
+            "covered": 150,
+            "n": 138,
+            "controls": null,
+            "sessions": 25,
+            "meanPoints": -2.4954434750462138,
+            "hitDelta": -0.00790381060437596,
+            "hitRate": 0.4782608695652174,
+            "baselineRate": 0.4861646801695935,
+            "interval": [
+              -7.841471710005915,
+              4.0314537498278735
+            ],
+            "finding": "INCONCLUSIVE"
+          },
+          {
+            "id": "RECTANGLE",
+            "total": 79,
+            "covered": 79,
+            "n": 69,
+            "controls": null,
+            "sessions": 24,
+            "meanPoints": -3.2345165330791756,
+            "hitDelta": -0.06735717375608344,
+            "hitRate": 0.42028985507246375,
+            "baselineRate": 0.48764702882854727,
+            "interval": [
+              -9.83344819699209,
+              2.8687485694882167
+            ],
+            "finding": "INCONCLUSIVE"
+          },
+          {
+            "id": "BREAK_RETEST",
+            "total": 450,
+            "covered": 450,
+            "n": 416,
+            "controls": null,
+            "sessions": 25,
+            "meanPoints": 0.036013470148945986,
+            "hitDelta": -0.012563237186938508,
+            "hitRate": 0.5072115384615384,
+            "baselineRate": 0.5197747756484772,
+            "interval": [
+              -2.604064102613692,
+              3.263811659088908
+            ],
+            "finding": "INCONCLUSIVE"
+          }
+        ],
+        "modifiers": [
+          {
+            "id": "STOCHASTIC",
+            "total": 2029,
+            "covered": 2029,
+            "n": 137,
+            "controls": 948,
+            "sessions": 24,
+            "meanPoints": 3.120927729913738,
+            "hitDelta": 0.08900534393256664,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": [
+              -1.2688968899001714,
+              8.570154425196392
+            ],
+            "finding": "INCONCLUSIVE"
+          },
+          {
+            "id": "RSI",
+            "total": 2029,
+            "covered": 2029,
+            "n": 12,
+            "controls": 139,
+            "sessions": 9,
+            "meanPoints": 18.577502515604042,
+            "hitDelta": 0.4555921283390308,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "BOLLINGER",
+            "total": 2029,
+            "covered": 1993,
+            "n": 456,
+            "controls": 1059,
+            "sessions": 25,
+            "meanPoints": -2.1716893614107144,
+            "hitDelta": -0.04115992321442047,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": [
+              -5.413075680142313,
+              0.9908007006861697
+            ],
+            "finding": "INCONCLUSIVE"
+          },
+          {
+            "id": "MACD",
+            "total": 2029,
+            "covered": 2007,
+            "n": 987,
+            "controls": 496,
+            "sessions": 25,
+            "meanPoints": 0.4443150545833681,
+            "hitDelta": 0.0342635542419335,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": [
+              -3.731654439837872,
+              4.275281174972861
+            ],
+            "finding": "INCONCLUSIVE"
+          },
+          {
+            "id": "RVOL",
+            "total": 2029,
+            "covered": 2029,
+            "n": 536,
+            "controls": 1116,
+            "sessions": 25,
+            "meanPoints": -1.5079604407461895,
+            "hitDelta": 0.004761550665638593,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": [
+              -5.174618358646663,
+              2.1159410977748814
+            ],
+            "finding": "INCONCLUSIVE"
+          },
+          {
+            "id": "VWAP",
+            "total": 2029,
+            "covered": 2029,
+            "n": 739,
+            "controls": 763,
+            "sessions": 25,
+            "meanPoints": -6.0358139394822885,
+            "hitDelta": -0.17874851310706596,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": [
+              -10.463233788602855,
+              -0.9893715058038717
+            ],
+            "finding": "NEGATIVE"
+          }
+        ]
+      },
+      {
+        "horizon": 5,
+        "patterns": [
+          {
+            "id": "ADVANCE_BLOCK",
+            "total": 81,
+            "covered": 81,
+            "n": 73,
+            "controls": null,
+            "sessions": 23,
+            "meanPoints": 1.9289941062808338,
+            "hitDelta": 0.020504167562460967,
+            "hitRate": 0.4657534246575342,
+            "baselineRate": 0.4452492570950732,
+            "interval": null,
+            "finding": "DESCRIPTIVE"
+          },
+          {
+            "id": "BEARISH_BELT_HOLD",
+            "total": 1392,
+            "covered": 1392,
+            "n": 1202,
+            "controls": null,
+            "sessions": 25,
+            "meanPoints": -0.18940591852890035,
+            "hitDelta": -0.024616957138637992,
+            "hitRate": 0.4733777038269551,
+            "baselineRate": 0.497994660965593,
+            "interval": null,
+            "finding": "DESCRIPTIVE"
+          },
+          {
+            "id": "DOUBLE_TOP",
+            "total": 164,
+            "covered": 164,
+            "n": 148,
+            "controls": null,
+            "sessions": 25,
+            "meanPoints": 0.877492133164056,
+            "hitDelta": 0.04272772880551516,
+            "hitRate": 0.5540540540540541,
+            "baselineRate": 0.5113263252485385,
+            "interval": null,
+            "finding": "DESCRIPTIVE"
+          },
+          {
+            "id": "DOUBLE_BOTTOM",
+            "total": 150,
+            "covered": 150,
+            "n": 139,
+            "controls": null,
+            "sessions": 25,
+            "meanPoints": 0.6200208250045238,
+            "hitDelta": 0.042183426209920195,
+            "hitRate": 0.5179856115107914,
+            "baselineRate": 0.4758021853008711,
+            "interval": null,
+            "finding": "DESCRIPTIVE"
+          },
+          {
+            "id": "RECTANGLE",
+            "total": 79,
+            "covered": 79,
+            "n": 71,
+            "controls": null,
+            "sessions": 24,
+            "meanPoints": -0.49229666536835837,
+            "hitDelta": -0.048990110324759084,
+            "hitRate": 0.4507042253521127,
+            "baselineRate": 0.4996943356768718,
+            "interval": null,
+            "finding": "DESCRIPTIVE"
+          },
+          {
+            "id": "BREAK_RETEST",
+            "total": 450,
+            "covered": 450,
+            "n": 418,
+            "controls": null,
+            "sessions": 25,
+            "meanPoints": 0.29057151707754114,
+            "hitDelta": -0.011296966374217624,
+            "hitRate": 0.48564593301435405,
+            "baselineRate": 0.49694289938857117,
+            "interval": null,
+            "finding": "DESCRIPTIVE"
+          }
+        ],
+        "modifiers": [
+          {
+            "id": "STOCHASTIC",
+            "total": 2051,
+            "covered": 2051,
+            "n": 138,
+            "controls": 989,
+            "sessions": 25,
+            "meanPoints": 1.2966880641592122,
+            "hitDelta": 0.032825565483401854,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "DESCRIPTIVE"
+          },
+          {
+            "id": "RSI",
+            "total": 2051,
+            "covered": 2051,
+            "n": 12,
+            "controls": 142,
+            "sessions": 9,
+            "meanPoints": 6.5019245781188735,
+            "hitDelta": 0.24188127431288953,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "BOLLINGER",
+            "total": 2051,
+            "covered": 2015,
+            "n": 460,
+            "controls": 1072,
+            "sessions": 25,
+            "meanPoints": -0.4998169370854162,
+            "hitDelta": -0.04406074784159796,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "DESCRIPTIVE"
+          },
+          {
+            "id": "MACD",
+            "total": 2051,
+            "covered": 2029,
+            "n": 1001,
+            "controls": 507,
+            "sessions": 25,
+            "meanPoints": 0.3296830123902468,
+            "hitDelta": 0.032666953747758104,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "DESCRIPTIVE"
+          },
+          {
+            "id": "RVOL",
+            "total": 2051,
+            "covered": 2051,
+            "n": 543,
+            "controls": 1128,
+            "sessions": 25,
+            "meanPoints": -0.8794178778236325,
+            "hitDelta": -0.010200717282688093,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "DESCRIPTIVE"
+          },
+          {
+            "id": "VWAP",
+            "total": 2051,
+            "covered": 2051,
+            "n": 748,
+            "controls": 775,
+            "sessions": 25,
+            "meanPoints": -0.7611747318651068,
+            "hitDelta": -0.019767961277265125,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "DESCRIPTIVE"
+          }
+        ]
+      }
+    ]
+  },
+  "replication": {
+    "source": "FirstRate Data",
+    "url": "https://firstratedata.com/i/futures/NQ",
+    "sha256": "b87ca816f47e60c35ae87256faf102c1b0975f352c1e2a74c26496a324159915",
+    "from": "2026-11-02",
+    "to": "2026-11-12",
+    "warmupSessions": 0,
+    "sessions": 9,
+    "bars": 12420,
+    "volumeBars": 12420,
+    "vwapBars": 12420,
+    "rvolBars": 5520,
+    "reports": [
+      {
+        "horizon": 15,
+        "patterns": [
+          {
+            "id": "ADVANCE_BLOCK",
+            "total": 37,
+            "covered": 37,
+            "n": 33,
+            "controls": null,
+            "sessions": 9,
+            "meanPoints": 10.475171710098184,
+            "hitDelta": 0.15933675158274088,
+            "hitRate": 0.6363636363636364,
+            "baselineRate": 0.47702688478089544,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "BEARISH_BELT_HOLD",
+            "total": 358,
+            "covered": 358,
+            "n": 316,
+            "controls": null,
+            "sessions": 9,
+            "meanPoints": -2.12628562194893,
+            "hitDelta": -0.023579251309906363,
+            "hitRate": 0.49683544303797467,
+            "baselineRate": 0.5204146943478812,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "DOUBLE_TOP",
+            "total": 65,
+            "covered": 65,
+            "n": 58,
+            "controls": null,
+            "sessions": 9,
+            "meanPoints": 1.1611780667184612,
+            "hitDelta": -0.03421701559178873,
+            "hitRate": 0.5,
+            "baselineRate": 0.5342170155917887,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "DOUBLE_BOTTOM",
+            "total": 62,
+            "covered": 62,
+            "n": 58,
+            "controls": null,
+            "sessions": 9,
+            "meanPoints": 1.3220078135043916,
+            "hitDelta": 0.021121621223041103,
+            "hitRate": 0.5,
+            "baselineRate": 0.47887837877695894,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "RECTANGLE",
+            "total": 25,
+            "covered": 25,
+            "n": 22,
+            "controls": null,
+            "sessions": 7,
+            "meanPoints": 10.64133286777839,
+            "hitDelta": 0.17209765872867477,
+            "hitRate": 0.5909090909090909,
+            "baselineRate": 0.4188114321804163,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "BREAK_RETEST",
+            "total": 162,
+            "covered": 162,
+            "n": 148,
+            "controls": null,
+            "sessions": 9,
+            "meanPoints": 7.708199503144354,
+            "hitDelta": 0.028259270538682307,
+            "hitRate": 0.527027027027027,
+            "baselineRate": 0.498767756488345,
+            "interval": null,
+            "finding": "LIMITED"
+          }
+        ],
+        "modifiers": [
+          {
+            "id": "STOCHASTIC",
+            "total": 635,
+            "covered": 635,
+            "n": 30,
+            "controls": 237,
+            "sessions": 9,
+            "meanPoints": 1.5075603041534336,
+            "hitDelta": 0.06355514133667582,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "RSI",
+            "total": 635,
+            "covered": 635,
+            "n": 7,
+            "controls": 63,
+            "sessions": 6,
+            "meanPoints": 28.707143548588274,
+            "hitDelta": 0.11786305781752911,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "BOLLINGER",
+            "total": 635,
+            "covered": 630,
+            "n": 122,
+            "controls": 317,
+            "sessions": 9,
+            "meanPoints": -3.2430296115983346,
+            "hitDelta": 0.02333059427353083,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "MACD",
+            "total": 635,
+            "covered": 632,
+            "n": 294,
+            "controls": 143,
+            "sessions": 9,
+            "meanPoints": -7.288523972569206,
+            "hitDelta": -0.04734480162131019,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "RVOL",
+            "total": 635,
+            "covered": 261,
+            "n": 48,
+            "controls": 156,
+            "sessions": 4,
+            "meanPoints": -0.22834022967706002,
+            "hitDelta": -0.15530752509505769,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "VWAP",
+            "total": 635,
+            "covered": 635,
+            "n": 207,
+            "controls": 215,
+            "sessions": 9,
+            "meanPoints": -5.782600560548349,
+            "hitDelta": 0.029341481125605418,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "LIMITED"
+          }
+        ]
+      },
+      {
+        "horizon": 5,
+        "patterns": [
+          {
+            "id": "ADVANCE_BLOCK",
+            "total": 37,
+            "covered": 37,
+            "n": 34,
+            "controls": null,
+            "sessions": 9,
+            "meanPoints": 7.888156117719266,
+            "hitDelta": 0.1872237143863442,
+            "hitRate": 0.6176470588235294,
+            "baselineRate": 0.4304233444371853,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "BEARISH_BELT_HOLD",
+            "total": 358,
+            "covered": 358,
+            "n": 320,
+            "controls": null,
+            "sessions": 9,
+            "meanPoints": 0.48627677797134095,
+            "hitDelta": 0.007537333640516691,
+            "hitRate": 0.5125,
+            "baselineRate": 0.5049626663594834,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "DOUBLE_TOP",
+            "total": 65,
+            "covered": 65,
+            "n": 59,
+            "controls": null,
+            "sessions": 9,
+            "meanPoints": 6.425613007861987,
+            "hitDelta": -0.038285858812436964,
+            "hitRate": 0.4576271186440678,
+            "baselineRate": 0.49591297745650464,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "DOUBLE_BOTTOM",
+            "total": 62,
+            "covered": 62,
+            "n": 59,
+            "controls": null,
+            "sessions": 9,
+            "meanPoints": -0.8567098584920132,
+            "hitDelta": 0.026011000188467786,
+            "hitRate": 0.5084745762711864,
+            "baselineRate": 0.4824635760827185,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "RECTANGLE",
+            "total": 25,
+            "covered": 25,
+            "n": 22,
+            "controls": null,
+            "sessions": 7,
+            "meanPoints": 9.397685469610604,
+            "hitDelta": 0.03335214250989651,
+            "hitRate": 0.5,
+            "baselineRate": 0.4666478574901035,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "BREAK_RETEST",
+            "total": 162,
+            "covered": 162,
+            "n": 148,
+            "controls": null,
+            "sessions": 9,
+            "meanPoints": 3.0975147602904944,
+            "hitDelta": 0.05747241629594575,
+            "hitRate": 0.5405405405405406,
+            "baselineRate": 0.48306812424459467,
+            "interval": null,
+            "finding": "LIMITED"
+          }
+        ],
+        "modifiers": [
+          {
+            "id": "STOCHASTIC",
+            "total": 642,
+            "covered": 642,
+            "n": 33,
+            "controls": 240,
+            "sessions": 9,
+            "meanPoints": -0.4187334127052242,
+            "hitDelta": -0.05607806316239456,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "RSI",
+            "total": 642,
+            "covered": 642,
+            "n": 8,
+            "controls": 64,
+            "sessions": 6,
+            "meanPoints": 14.794966487373879,
+            "hitDelta": 0.24624239921237562,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "BOLLINGER",
+            "total": 642,
+            "covered": 637,
+            "n": 123,
+            "controls": 322,
+            "sessions": 9,
+            "meanPoints": -5.69814708479831,
+            "hitDelta": -0.07188605089411403,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "MACD",
+            "total": 642,
+            "covered": 639,
+            "n": 297,
+            "controls": 146,
+            "sessions": 9,
+            "meanPoints": -4.751777471174689,
+            "hitDelta": -0.09062818448994418,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "RVOL",
+            "total": 642,
+            "covered": 266,
+            "n": 49,
+            "controls": 161,
+            "sessions": 4,
+            "meanPoints": -4.921029909442216,
+            "hitDelta": -0.11821014370582271,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "LIMITED"
+          },
+          {
+            "id": "VWAP",
+            "total": 642,
+            "covered": 642,
+            "n": 209,
+            "controls": 218,
+            "sessions": 9,
+            "meanPoints": -5.539112055935294,
+            "hitDelta": -0.12218885505965037,
+            "hitRate": null,
+            "baselineRate": null,
+            "interval": null,
+            "finding": "LIMITED"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Arrow · איתותים לפי מדריך הנרות</title>
+  <link rel="stylesheet" href="guide-signals.css">
+</head>
+<body>
+  <main class="workspace">
+    <header class="page-header"><div><span class="brand" dir="ltr">Arrow</span><h1>איתותים לפי מדריך הנרות</h1></div><nav><a href="guide-library.html">ספריית ההסברים והתרגילים</a> · <a href="experiment.html">חזרה למעקב החזותי</a></nav></header>
+    <p class="intro">טוענים נתוני OHLC, בודקים צורה והקשר, ומחכים לאישור בנר סגור מאוחר יותר. התוצאה היא ניתוח מחקרי של הנתונים שנטענו; אין כאן שליחת פקודות או חיבור לחשבון מסחר.</p>
+    <p class="help">כל המערכים משתמשים בגרסת המחקר של אישור בסגירה מאוחרת מעבר לגבולות המערך המלאים. גם פריצת Inside Bar או חזרה מפריצת שווא יוצרות מערך שממתין לסגירה נוספת; אין הדמיית פקודות Stop / Limit או כניסה מיידית בפריצת Mother Bar.</p>
+    <p id="sample-banner" class="notice" hidden>מוצגים נתונים סינתטיים להדגמה בלבד. מחירים, מפרט חוזה ותקציב בדוגמה אינם הגדרות לחשבון שלכם.</p>
+
+    <section class="panel" aria-labelledby="import-title">
+      <div class="section-heading"><h2 id="import-title">1 · נתונים לבדיקה</h2><span id="input-summary" class="muted">טרם נטענו נתונים</span></div>
+      <div class="actions"><label class="file-button">בחירת JSON או CSV<input id="input-file" type="file" accept=".json,.csv,.txt,application/json,text/csv,text/plain"></label><button id="load-example" class="quiet">טעינת דוגמה סינתטית</button><button id="download-example" class="quiet">הורדת הדוגמה</button><button id="download-template" class="quiet">הורדת תבנית JSON</button></div>
+      <label for="input-text">הנתונים המקוריים</label>
+      <textarea id="input-text" rows="7" dir="ltr" spellcheck="false" placeholder='{"metadata":{"source":"ohlc", ...},"bars":[{"time":...,"closeTime":...,"open":...,"high":...,"low":...,"close":...,"closed":true}]}'></textarea>
+      <div class="import-options"><label>סוג קובץ<select id="import-format"><option value="auto">זיהוי JSON / CSV</option><option value="json">JSON</option><option value="csv">CSV</option></select></label><label>מפריד CSV<select id="csv-delimiter"><option value=",">פסיק</option><option value=";">נקודה־פסיק</option><option value="tab">Tab</option></select></label><label class="check"><input id="csv-closed-confirmed" type="checkbox">אם אין עמודת closed: אני מאשר שכל נרות ה־CSV סגורים, כולל האחרון</label></div>
+      <p class="help">עד 600 נרות. ב־CSV נדרשות עמודות time, open, high, low, close; volume ו־closed הן רשות. זמן טקסטואלי חייב לכלול Z או היסט אזור זמן. לא מדלגים בשקט על שורות חסרות או שגויות.</p>
+      <button id="validate-input" class="primary">טעינת הנתונים ובדיקתם</button>
+      <p id="import-status" role="status" class="field-status">לייבוא CSV, מלאו תחילה את פרטי הנתונים בהמשך.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="metadata-title">
+      <h2 id="metadata-title">2 · פרטי הנתונים וכללי המחקר</h2>
+      <div class="field-grid">
+        <label>נכס / חוזה מדויק<input id="instrument" type="text" dir="ltr" autocomplete="off" placeholder="נדרש מקור הנתונים"></label>
+        <label>שם טיימפריים<input id="timeframe" type="text" dir="ltr" autocomplete="off" placeholder="למשל 1m"></label>
+        <label>משך נר · ms<input id="timeframe-ms" type="number" min="1" step="1" dir="ltr" placeholder="60000 עבור דקה"></label>
+        <label>גודל טיק<input id="tick-size" type="number" min="0" step="any" dir="ltr" placeholder="לפי החוזה"></label>
+        <label>אזור זמן<input id="timezone" type="text" dir="ltr" value="Asia/Jerusalem" autocomplete="off"></label>
+        <label>Session / שעות המקור<input id="session" type="text" dir="ltr" autocomplete="off" placeholder="נדרש תיאור מפורש"></label>
+        <label>סוג גרף<select id="chart-type"><option value="standard">נרות רגילים</option><option value="heikin_ashi">Heikin Ashi · לא נתמך לאישור</option><option value="other">אחר / לא ידוע · לא נתמך לאישור</option></select></label>
+        <label>זמן החלטה לבדיקה · רשות<input id="as-of-time" type="text" dir="ltr" autocomplete="off" placeholder="ISO עם אזור זמן, או Epoch ms"></label>
+      </div>
+      <div class="rule-grid">
+        <label>תוקף אישור רגיל · נרות<input id="expiry-bars" type="number" value="3" min="1" max="100" step="1" dir="ltr"></label>
+        <label>תוקף Inside Bar · נרות<input id="inside-expiry-bars" type="number" value="5" min="1" max="100" step="1" dir="ltr"></label>
+        <label>תנאים נדרשים לפחות<input id="min-conditions" type="number" value="2" min="1" max="8" step="1" dir="ltr"></label>
+        <label>מרווח אישור · טיקים<input id="confirmation-buffer" type="number" value="1" min="0" max="100" step="any" dir="ltr"></label>
+      </div>
+      <div class="checks">
+        <label class="check"><input id="require-location" type="checkbox" checked>דרוש אזור מחיר ידוע</label>
+        <label class="check"><input id="require-risk" type="checkbox" checked>דרושה תוכנית סיכון תקינה לאיתות מאושר</label>
+        <label class="check"><input id="require-ema" type="checkbox">מסנן EMA</label>
+        <label class="check"><input id="require-fib" type="checkbox">מסנן פיבונאצ'י</label>
+        <label class="check"><input id="require-trendline" type="checkbox">מסנן קו מגמה</label>
+        <label class="check"><input id="require-supply-demand" type="checkbox">מסנן היצע / ביקוש</label>
+        <label class="check"><input id="require-higher-timeframe" type="checkbox">מסנן טיימפריים גבוה</label>
+      </div>
+      <p id="risk-mode-note" class="help">הספים הם הגדרות מחקר מהמדריך. מספר תנאים שהתקיימו אינו הסתברות לרווח.</p>
+      <details><summary>הגדרות מפורטות ונתוני טיימפריים גבוה</summary><p class="help">אפשר להזין patternConfig, contextConfig ו־higherTimeframes. לכל טיימפריים גבוה דרושים נרות סגורים, זמני זמינות ומשך נר גדול יותר. כל תשע משפחות התרחישים מופעלות כברירת מחדל, כולל בדיקה חוזרת של אזור שהחליף תפקיד לפי כלל המחקר. שינוי מפורש בהגדרות המחקר נשמר בייצוא.</p><textarea id="advanced-config" rows="6" dir="ltr" spellcheck="false">{"patternConfig":{},"contextConfig":{"roleReversalEnabled":true},"higherTimeframes":{}}</textarea><button id="download-rules" class="quiet">הורדת כללי המחקר</button></details>
+    </section>
+
+    <section class="panel" aria-labelledby="risk-title">
+      <h2 id="risk-title">3 · סיכון ומדדי תנועה</h2>
+      <p class="help">מלאו נתוני חוזה ותקציב מפורשים. עלויות הן אומדן לסיבוב מלא לחוזה; אין ערכי NQ או תקציב חשבון אוטומטיים.</p>
+      <div class="field-grid">
+        <label>ערך נקודה לחוזה<input id="point-value" type="number" min="0" step="any" dir="ltr" placeholder="נדרש לחישוב סיכון"></label>
+        <label>תקציב סיכון לעסקה<input id="risk-budget" type="number" min="0" step="any" dir="ltr" placeholder="במטבע החוזה"></label>
+        <label>עמלה לסיבוב לחוזה<input id="commission" type="number" min="0" step="any" dir="ltr" placeholder="0 רק אם זו הנחת המחקר"></label>
+        <label>החלקה לסיבוב · טיקים<input id="slippage" type="number" min="0" step="any" dir="ltr" placeholder="נדרשת הנחה מפורשת"></label>
+        <label>מספר חוזים מרבי<input id="max-contracts" type="number" min="1" step="1" dir="ltr" placeholder="נדרש לחישוב סיכון"></label>
+        <label>יעד מתוכנן · R<input id="reward-risk" type="number" value="2" min="0" step="any" dir="ltr"></label>
+        <label>יחס מינימלי · R<input id="min-reward-risk" type="number" value="1" min="0" step="any" dir="ltr"></label>
+        <label>סיכון יומי שנותר · רשות<input id="daily-risk" type="number" min="0" step="any" dir="ltr"></label>
+        <label>הפסדים רצופים · רשות<input id="loss-count" type="number" min="0" step="1" dir="ltr"></label>
+        <label>גבול הפסדים רצופים · רשות<input id="loss-limit" type="number" min="1" step="1" dir="ltr"></label>
+        <label>חלון MFE / MAE · נרות<input id="excursion-horizon" type="number" value="5" min="1" max="10000" step="1" dir="ltr"></label>
+      </div>
+      <p class="help">MFE ו־MAE יוצגו רק לאחר חלוף כל חלון המדידה. מחיר הייחוס הוא סגירת נר האישור; אלה מדדי תנועה ולא רווח ממומש. אין הסקה מי הגיע קודם לסטופ וליעד.</p>
+      <div class="actions analyze-actions"><button id="analyze" class="primary" disabled>ניתוח הנתונים לפי כללי המדריך</button><button id="export-results" class="quiet" disabled>הורדת תוצאות והגדרות JSON</button></div>
+      <p id="analysis-status" role="status" class="field-status">טענו ובדקו נתונים כדי להתחיל.</p>
+    </section>
+
+    <section class="panel results" aria-labelledby="results-title">
+      <div class="section-heading"><h2 id="results-title">תוצאות המחקר</h2><span id="definition-version" class="muted" dir="ltr"></span></div>
+      <dl class="stats"><div><dt>נרות סגורים זמינים</dt><dd id="stat-bars">—</dd></div><div><dt>צורות שנמצאו</dt><dd id="stat-patterns">—</dd></div><div><dt>איתותים מאושרים מאוחדים</dt><dd id="stat-confirmed">—</dd></div><div><dt>מערכים שנפסלו</dt><dd id="stat-rejected">—</dd></div></dl>
+      <div class="context-summary"><p id="market-context">מצב השוק יופיע לאחר הניתוח.</p><p id="latest-signal">איתות מאושר אחרון בקובץ יופיע כאן.</p><p id="quality-status" class="help">אין נתונים שנבדקו.</p></div>
+      <div class="ledger-toolbar"><h3>איתותים מאוחדים ומערכים ממתינים / פסולים</h3><label>הצגת מצב<select id="status-filter"><option value="ALL">כל המצבים</option><option value="CONFIRMED">מאושר</option><option value="ARMED">ממתין לאישור</option><option value="REJECTED">נפסל</option><option value="EXPIRED">פג תוקף</option><option value="INVALIDATED">בוטל</option><option value="AMBIGUOUS">עמום</option></select></label></div>
+      <div class="table-scroll"><table><thead><tr><th>זמן ידיעת התבנית</th><th>כיוון ותבניות</th><th>מצב והקשר</th><th>אישור ורמות</th><th>סיבה ופרטים</th></tr></thead><tbody id="event-rows"><tr><td colspan="5">טרם נותחו נתונים.</td></tr></tbody></table></div>
+      <div class="pagination"><button id="previous-page" class="quiet" disabled>הקודם</button><span id="page-status" class="muted">—</span><button id="next-page" class="quiet" disabled>הבא</button></div>
+      <details><summary>תבניות ונתוני הקשר שחושבו</summary><pre id="technical-result" dir="ltr">טרם בוצע ניתוח.</pre></details>
+    </section>
+    <footer><a href="Candlestick_Codex_Guide_HE.txt" target="_blank" rel="noopener">המדריך המקורי והגדרות המחקר</a><span>נתונים מקומיים · צורה, הקשר ואישור בנפרד · אין מדד הסתברות לרווח</span></footer>
+  </main>
+  <script type="module" src="guide-signals.mjs"></script>
+</body>
+</html>
